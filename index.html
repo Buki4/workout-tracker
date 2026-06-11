@@ -375,6 +375,29 @@ body{min-height:100dvh;overscroll-behavior:none;-webkit-tap-highlight-color:tran
 <!-- TOAST -->
 <div class="toast" id="toast"></div>
 
+<!-- UPDATE MODAL -->
+<div class="ai-modal" id="updatePromptModal">
+  <div class="ai-modal-content" style="max-width:320px;text-align:center">
+    <div style="font-size:32px;margin-bottom:10px">🚀</div>
+    <div style="font-weight:700;margin-bottom:10px;font-size:18px">Доступно обновление!</div>
+    <div style="font-size:14px;color:var(--text2);margin-bottom:20px;line-height:1.5">Вышла новая версия приложения: <span id="newVersionSpan" style="font-weight:600;color:var(--accent)">v0.0.0</span>. Обновить сейчас?</div>
+    <div style="display:flex;gap:10px">
+      <button class="ai-btn-close" style="flex:1" onclick="document.getElementById('updatePromptModal').classList.remove('show')">Позже</button>
+      <button class="ai-btn-close" style="flex:1;background:linear-gradient(135deg,var(--accent),#a78bfa);color:#fff" onclick="forceUpdate()">Обновить</button>
+    </div>
+  </div>
+</div>
+
+<!-- CHANGELOG MODAL -->
+<div class="ai-modal" id="changelogModal">
+  <div class="ai-modal-content" style="max-width:320px">
+    <div style="font-size:32px;margin-bottom:10px;text-align:center">✨</div>
+    <div style="font-weight:700;margin-bottom:15px;font-size:18px;text-align:center">Что нового в <span id="changelogVersionSpan">v0.0.0</span></div>
+    <div id="changelogText" style="font-size:14px;color:var(--text2);margin-bottom:20px;line-height:1.6;white-space:pre-wrap;text-align:left;background:var(--bg);padding:15px;border-radius:8px"></div>
+    <button class="ai-btn-close" style="width:100%" onclick="document.getElementById('changelogModal').classList.remove('show')">Понятно</button>
+  </div>
+</div>
+
 <!-- AI MODAL -->
 <div id="ai-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);flex-direction:column;align-items:center;justify-content:center;padding:24px">
   <div style="background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:24px;width:100%;max-width:420px;max-height:80vh;overflow-y:auto">
@@ -1435,18 +1458,60 @@ window.addEventListener('popstate', function(e) {
   }
 });
 
+async function checkForUpdates() {
+    try {
+        const res = await fetch('./version.json?t=' + Date.now());
+        if (!res.ok) return;
+        const data = await res.json();
+        
+        const currentVersion = localStorage.getItem('appVersion') || '0.0.1';
+        
+        const appVersionEl = document.getElementById('app-version');
+        if(appVersionEl && data.version) {
+            appVersionEl.textContent = 'v' + data.version;
+        }
+
+        if (data.version !== currentVersion) {
+            localStorage.setItem('pendingChangelog', data.changelog || '');
+            localStorage.setItem('pendingVersion', data.version);
+            const span = document.getElementById('newVersionSpan');
+            if (span) span.textContent = 'v' + data.version;
+            document.getElementById('updatePromptModal').classList.add('show');
+        }
+    } catch(e) {
+        console.error('Update check failed', e);
+    }
+}
+
+function checkChangelog() {
+    const pendingChangelog = localStorage.getItem('pendingChangelog');
+    const pendingVersion = localStorage.getItem('pendingVersion');
+    if (pendingChangelog && pendingVersion) {
+        localStorage.setItem('appVersion', pendingVersion);
+        
+        const versionSpan = document.getElementById('changelogVersionSpan');
+        if(versionSpan) versionSpan.textContent = 'v' + pendingVersion;
+        
+        const textEl = document.getElementById('changelogText');
+        if(textEl) textEl.textContent = pendingChangelog;
+        
+        document.getElementById('changelogModal').classList.add('show');
+        
+        localStorage.removeItem('pendingChangelog');
+        localStorage.removeItem('pendingVersion');
+    } else if (!localStorage.getItem('appVersion')) {
+        localStorage.setItem('appVersion', '0.0.1');
+    }
+}
+
+checkChangelog();
+checkForUpdates();
+
 // Register service worker for offline use
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
-      reg.addEventListener('updatefound', function() {
-        var nw = reg.installing;
-        nw.addEventListener('statechange', function() {
-          if (nw.state === 'installed' && navigator.serviceWorker.controller) {
-            if(confirm('Доступна новая версия приложения! Обновить сейчас?')) window.location.reload();
-          }
-        });
-      });
+      // SW registered
     }).catch(function(){});
   });
 }
