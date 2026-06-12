@@ -944,13 +944,31 @@ function navTo(tab) {
   else if(tab==='profile'){showScreen('profile-screen');document.getElementById('nav-prof').classList.add('active');}
 }
 
+var curLibFilter = 'Все';
+function setLibFilter(f) {
+  curLibFilter = f;
+  renderLibrary();
+}
+
+function getMuscleGroup(name) {
+  var n = name.toLowerCase();
+  if (n.includes('приседан') || n.includes('выпады') || n.includes('мостик') || n.includes('носки') || n.includes('румынская')) return 'Ноги';
+  if (n.includes('подтягиван') || n.includes('тяга') || n.includes('пулловер')) return 'Спина';
+  if (n.includes('армейский') || n.includes('жим гантелей сидя') || n.includes('махи')) return 'Плечи';
+  if (n.includes('жим штанги') || n.includes('отжимания от пола') || n.includes('разводка') || n.includes('жим гантелей лёжа') || n.includes('брусья')) return 'Грудь';
+  if (n.includes('бицепс') || n.includes('сгибани') || n.includes('молот') || n.includes('французский') || n.includes('разгибани') || n.includes('отжимания от скамьи')) return 'Руки';
+  if (n.includes('планка') || n.includes('скручиван') || n.includes('пресс')) return 'Пресс';
+  if (n.includes('канат') || n.includes('бег') || n.includes('вело')) return 'Кардио';
+  return 'Другое';
+}
+
 function renderLibrary() {
   var exsMap = {};
   P.months.forEach(function(m){
     m.workouts.forEach(function(w){
       w.exs.forEach(function(ex){
         if (!exsMap[ex.name]) {
-          exsMap[ex.name] = { count: 0, note: ex.note };
+          exsMap[ex.name] = { count: 0, note: ex.note, mg: getMuscleGroup(ex.name) };
         }
         exsMap[ex.name].count++;
       });
@@ -959,10 +977,23 @@ function renderLibrary() {
   
   var sortedExs = Object.keys(exsMap).sort();
   var uw = getWeights();
-  var html = '<div style="color:var(--text2);font-size:14px;margin-top:-20px;margin-bottom:5px">Всего уникальных упражнений: '+sortedExs.length+'</div>';
+  
+  var filters = ['Все', 'Грудь', 'Спина', 'Ноги', 'Плечи', 'Руки', 'Пресс', 'Кардио'];
+  var html = '<style>.no-scroll::-webkit-scrollbar{display:none}</style><div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;margin-top:-20px;margin-bottom:5px;" class="no-scroll">';
+  filters.forEach(function(f){
+    var active = curLibFilter === f;
+    html += '<div onclick="setLibFilter(\''+f+'\')" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;-webkit-tap-highlight-color:transparent;'+(active?'background:var(--accent);color:#fff;':'background:var(--card2);color:var(--text2);border:1px solid var(--border);')+'">'+f+'</div>';
+  });
+  html += '</div>';
+
+  var visibleCount = 0;
+  var listHtml = '';
   
   sortedExs.forEach(function(name) {
     var ex = exsMap[name];
+    if (curLibFilter !== 'Все' && ex.mg !== curLibFilter) return;
+    visibleCount++;
+    
     var globalStats = uw[name];
     var statText = 'Нет данных о тренировках';
     
@@ -978,12 +1009,16 @@ function renderLibrary() {
       }
     }
     
-    html += '<div style="background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:15px">' +
-      '<div style="font-weight:700;font-size:16px;margin-bottom:6px">'+name+'</div>' +
+    listHtml += '<div style="background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:15px">' +
+      '<div style="font-weight:700;font-size:16px;margin-bottom:4px">'+name+'</div>' +
+      '<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">'+ex.mg+'</div>' +
       (ex.note ? '<div style="font-size:13px;color:var(--text2);margin-bottom:8px">💡 '+ex.note+'</div>' : '') +
       '<div style="font-size:13px;color:var(--accent);font-weight:600">'+statText+'</div>' +
     '</div>';
   });
+  
+  html += '<div style="color:var(--text3);font-size:12px;margin-bottom:5px">Отображено упражнений: '+visibleCount+'</div>';
+  html += listHtml;
   
   document.getElementById('lib-list').innerHTML = html;
 }
