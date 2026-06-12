@@ -1677,7 +1677,9 @@ function finishWorkout() {
       var k = ex.id + '_' + si;
       if (wState[k] && wState[k].done && wState[k].weight) {
         var w = parseFloat(wState[k].weight) || 0;
-        var reps = parseInt(s) || 0;
+        var rStr = wState[k].reps || s.r || s;
+        var reps = parseInt(rStr) || 0;
+        if(isNaN(curTonnage)) curTonnage = 0; // fallback if already NaN
         curTonnage += w * reps;
         if (w > exMax) { exMax = w; hitPR = true; }
       }
@@ -1758,6 +1760,35 @@ function showToast(msg){
 // INIT
 // ─────────────────────────────────────────
 function updateGreeting() {
+  var h = getHistory();
+  var changed = false;
+  var totalTon = 0;
+  h.forEach(function(x) {
+    if (isNaN(x.tonnage) || !x.tonnage) {
+      // Recovery
+      var wsStr = localStorage.getItem('ws_prog_default_1_' + x.wid) || localStorage.getItem('ws_' + x.wid);
+      if(wsStr) {
+        try {
+          var ws = JSON.parse(wsStr);
+          var curT = 0;
+          Object.keys(ws).forEach(function(k) {
+            if(ws[k].done && ws[k].weight) {
+              var w = parseFloat(ws[k].weight) || 0;
+              var reps = parseInt(ws[k].reps) || 10;
+              curT += w * reps;
+            }
+          });
+          if(curT > 0) { x.tonnage = curT; changed = true; }
+        } catch(e){}
+      }
+    }
+    totalTon += (x.tonnage || 0);
+  });
+  if(changed) {
+    localStorage.setItem('wh', JSON.stringify(h));
+    localStorage.setItem('tonnage', totalTon);
+  }
+
   var nm = localStorage.getItem('profName') || '';
   var el = document.getElementById('greet-title');
   if(el) el.textContent = nm ? 'Привет, ' + nm + '! 👋' : 'Программа тренировок';
@@ -1769,7 +1800,6 @@ function updateGreeting() {
     var ton = parseFloat(localStorage.getItem('tonnage')) || 0;
     tonEl.textContent = (ton/1000).toFixed(1);
   }
-  var h = getHistory();
   if(wEl) wEl.textContent = h.length;
   var gkEl = document.getElementById('gemini-key');
   if(gkEl && !gkEl.value) { var gk = localStorage.getItem('gemini_key'); if(gk) gkEl.value = gk; }
