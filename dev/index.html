@@ -963,9 +963,6 @@ function getMuscleGroup(name) {
 }
 
 function renderLibrary() {
-  var filtersWrap = document.getElementById('lib-filters');
-  var savedScroll = filtersWrap ? filtersWrap.scrollLeft : 0;
-
   var exsMap = {};
   P.months.forEach(function(m){
     m.workouts.forEach(function(w){
@@ -981,13 +978,38 @@ function renderLibrary() {
   var sortedExs = Object.keys(exsMap).sort();
   var uw = getWeights();
   
+  var libList = document.getElementById('lib-list');
+  var filtersWrap = document.getElementById('lib-filters-container');
+  var itemsWrap = document.getElementById('lib-items-container');
+  
+  if (!filtersWrap || !itemsWrap) {
+    libList.innerHTML = '<style>.no-scroll::-webkit-scrollbar{display:none}</style><div id="lib-filters-container" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;margin-top:-20px;margin-bottom:5px;" class="no-scroll"></div><div id="lib-items-container" style="display:flex;flex-direction:column;gap:15px;"></div>';
+    filtersWrap = document.getElementById('lib-filters-container');
+    itemsWrap = document.getElementById('lib-items-container');
+  }
+  
   var filters = ['Все', 'Грудь', 'Спина', 'Ноги', 'Плечи', 'Руки', 'Пресс', 'Кардио'];
-  var html = '<style>.no-scroll::-webkit-scrollbar{display:none}</style><div id="lib-filters" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;margin-top:-20px;margin-bottom:5px;" class="no-scroll">';
-  filters.forEach(function(f){
+  if (!filtersWrap.children.length) {
+    var filtersHtml = '';
+    filters.forEach(function(f){
+      filtersHtml += '<div data-filter="'+f+'" onclick="setLibFilter(\''+f+'\')" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;-webkit-tap-highlight-color:transparent;">'+f+'</div>';
+    });
+    filtersWrap.innerHTML = filtersHtml;
+  }
+  
+  Array.from(filtersWrap.children).forEach(function(child) {
+    var f = child.getAttribute('data-filter');
     var active = curLibFilter === f;
-    html += '<div onclick="setLibFilter(\''+f+'\')" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;-webkit-tap-highlight-color:transparent;'+(active?'background:var(--accent);color:#fff;':'background:var(--card2);color:var(--text2);border:1px solid var(--border);')+'">'+f+'</div>';
+    if (active) {
+       child.style.background = 'var(--accent)';
+       child.style.color = '#fff';
+       child.style.border = '1px solid var(--accent)';
+    } else {
+       child.style.background = 'var(--card2)';
+       child.style.color = 'var(--text2)';
+       child.style.border = '1px solid var(--border)';
+    }
   });
-  html += '</div>';
 
   var visibleCount = 0;
   var listHtml = '';
@@ -1020,15 +1042,7 @@ function renderLibrary() {
     '</div>';
   });
   
-  html += '<div style="color:var(--text3);font-size:12px;margin-bottom:5px">Отображено упражнений: '+visibleCount+'</div>';
-  html += listHtml;
-  
-  document.getElementById('lib-list').innerHTML = html;
-  
-  setTimeout(function() {
-    var newFiltersWrap = document.getElementById('lib-filters');
-    if (newFiltersWrap) newFiltersWrap.scrollLeft = savedScroll;
-  }, 10);
+  itemsWrap.innerHTML = '<div style="color:var(--text3);font-size:12px;margin-bottom:-10px">Отображено упражнений: '+visibleCount+'</div>' + listHtml;
 }
 
 function exportData() {
