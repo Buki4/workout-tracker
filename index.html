@@ -286,6 +286,16 @@ body{min-height:100dvh;overscroll-behavior:none;-webkit-tap-highlight-color:tran
 </div>
 
 <!-- HISTORY SCREEN -->
+<div id="library-screen" class="screen">
+  <div class="top-bar">
+    <div class="tbi">
+      <div class="tbi-title">Библиотека</div>
+      <div class="tbi-sub">Все упражнения из программы</div>
+    </div>
+  </div>
+  <div style="padding:20px;padding-top:100px;display:flex;flex-direction:column;gap:15px;padding-bottom:100px" id="lib-list"></div>
+</div>
+
 <div id="history-screen" class="screen">
   <div class="top-bar">
     <div class="tbi">
@@ -338,6 +348,12 @@ body{min-height:100dvh;overscroll-behavior:none;-webkit-tap-highlight-color:tran
       <input type="file" id="import-file" style="display:none" accept=".json" onchange="importData(event)">
       <button class="finish-btn" style="width:100%;background:var(--card2);color:var(--text);border:1px solid var(--border)" onclick="document.getElementById('import-file').click()">⬆️ Загрузить из файла</button>
     </div>
+    <div style="background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:15px">
+      <div style="font-weight:700;margin-bottom:10px;font-size:16px">Обратная связь</div>
+      <div style="color:var(--text2);font-size:13px;margin-bottom:15px;line-height:1.4">Нашел баг или есть идея для новой фичи? Напиши разработчику напрямую!</div>
+      <button class="finish-btn" style="width:100%;background:var(--card2);color:var(--text);border:1px solid var(--border)" onclick="document.getElementById('feedbackModal').classList.add('show'); setTimeout(()=>document.getElementById('feedbackTextarea').focus(),100)">💬 Оставить фидбек</button>
+    </div>
+
     <div style="background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:15px">
       <div style="font-weight:700;margin-bottom:10px;font-size:16px">Обновление</div>
       <button class="finish-btn" style="width:100%;background:var(--card2);color:var(--text);border:1px solid var(--border);font-size:14px" onclick="forceUpdate()">🔄 Обновить приложение</button>
@@ -398,6 +414,24 @@ body{min-height:100dvh;overscroll-behavior:none;-webkit-tap-highlight-color:tran
   </div>
 </div>
 
+<!-- FEEDBACK MODAL -->
+<div class="ai-modal" id="feedbackModal">
+  <div class="ai-modal-content" style="max-width:320px">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
+      <div style="font-weight:700;font-size:18px">Обратная связь</div>
+      <button style="background:transparent;border:none;color:var(--text2);font-size:20px;cursor:pointer" onclick="closeFeedback()">✕</button>
+    </div>
+    <textarea id="feedbackTextarea" placeholder="Напиши сообщение..." style="width:100%;height:120px;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:12px;font-family:inherit;font-size:14px;margin-bottom:12px;resize:none;outline:none"></textarea>
+    <input type="file" id="feedbackImageInput" accept="image/*" style="display:none">
+    <img id="feedbackImagePreview" style="display:none;width:100%;border-radius:8px;margin-bottom:16px;max-height:200px;object-fit:cover">
+    
+    <div style="display:flex;gap:10px">
+      <button id="attachImageBtn" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 15px;cursor:pointer;font-size:18px" onclick="document.getElementById('feedbackImageInput').click()">📎</button>
+      <button id="sendFeedbackBtn" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer" onclick="sendFeedback()">Отправить</button>
+    </div>
+  </div>
+</div>
+
 <!-- AI MODAL -->
 <div id="ai-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);flex-direction:column;align-items:center;justify-content:center;padding:24px">
   <div style="background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:24px;width:100%;max-width:420px;max-height:80vh;overflow-y:auto">
@@ -413,6 +447,9 @@ body{min-height:100dvh;overscroll-behavior:none;-webkit-tap-highlight-color:tran
 <nav class="bottom-nav" id="bnav">
   <button class="nav-item active" id="nav-home" onclick="navTo('home')">
     <span class="nav-icon">🏠</span><span class="nav-label">Программа</span>
+  </button>
+  <button class="nav-item" id="nav-lib" onclick="navTo('library')">
+    <span class="nav-icon">📚</span><span class="nav-label">Библиотека</span>
   </button>
   <button class="nav-item" id="nav-hist" onclick="navTo('history')">
     <span class="nav-icon">📋</span><span class="nav-label">История</span>
@@ -831,22 +868,23 @@ function loadWS(id) {
 function getWeights() {
   try { var r=localStorage.getItem('uw'); return r?JSON.parse(r):{}; } catch(e){ return {}; }
 }
-function saveWeight(exId, si, weight, diff) {
+function saveUW(exName, si, weight, diff, reps) {
   try {
     var w=getWeights();
-    var arr = w[exId];
+    var arr = w[exName];
     if (!Array.isArray(arr)) {
        var oldW = '';
        if (typeof arr === 'string') oldW = arr;
        else if (arr && typeof arr === 'object') oldW = arr.w;
        arr = [];
-       if (oldW) arr[0] = { w: oldW, d: '' };
+       if (oldW) arr[0] = { w: oldW, d: '', r: '' };
     }
-    var obj = arr[si] || { w: '', d: '' };
+    var obj = arr[si] || { w: '', d: '', r: '' };
     if (weight !== undefined) obj.w = weight;
     if (diff !== undefined) obj.d = diff;
+    if (reps !== undefined) obj.r = reps;
     arr[si] = obj;
-    w[exId] = arr;
+    w[exName] = arr;
     localStorage.setItem('uw', JSON.stringify(w));
   } catch(e){}
 }
@@ -898,8 +936,53 @@ function showScreen(id, fromPop) {
 function navTo(tab) {
   document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
   if(tab==='home'){renderHome();showScreen('home');document.getElementById('nav-home').classList.add('active');}
+  else if(tab==='library'){renderLibrary();showScreen('library-screen');document.getElementById('nav-lib').classList.add('active');}
   else if(tab==='history'){renderHistory();showScreen('history-screen');document.getElementById('nav-hist').classList.add('active');}
   else if(tab==='profile'){showScreen('profile-screen');document.getElementById('nav-prof').classList.add('active');}
+}
+
+function renderLibrary() {
+  var exsMap = {};
+  P.months.forEach(function(m){
+    m.workouts.forEach(function(w){
+      w.exs.forEach(function(ex){
+        if (!exsMap[ex.name]) {
+          exsMap[ex.name] = { count: 0, note: ex.note };
+        }
+        exsMap[ex.name].count++;
+      });
+    });
+  });
+  
+  var sortedExs = Object.keys(exsMap).sort();
+  var uw = getWeights();
+  var html = '<div style="color:var(--text2);font-size:14px;margin-top:-20px;margin-bottom:5px">Всего уникальных упражнений: '+sortedExs.length+'</div>';
+  
+  sortedExs.forEach(function(name) {
+    var ex = exsMap[name];
+    var globalStats = uw[name];
+    var statText = 'Нет данных о тренировках';
+    
+    if (globalStats && globalStats.length > 0) {
+      var lastSet = null;
+      for(var i=globalStats.length-1; i>=0; i--) {
+        if(globalStats[i] && (globalStats[i].w || globalStats[i].r)) { lastSet = globalStats[i]; break; }
+      }
+      if (!lastSet && globalStats[0]) lastSet = globalStats[0];
+      
+      if (lastSet && (lastSet.w || lastSet.r)) {
+         statText = 'Последний результат: ' + (lastSet.w ? lastSet.w + ' кг' : '') + (lastSet.w && lastSet.r ? ' × ' : '') + (lastSet.r ? lastSet.r + ' повт' : '');
+      }
+    }
+    
+    html += '<div style="background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:15px">' +
+      '<div style="font-weight:700;font-size:16px;margin-bottom:6px">'+name+'</div>' +
+      (ex.note ? '<div style="font-size:13px;color:var(--text2);margin-bottom:8px">💡 '+ex.note+'</div>' : '') +
+      '<div style="font-size:13px;color:var(--accent);font-weight:600">'+statText+'</div>' +
+    '</div>';
+  });
+  
+  document.getElementById('lib-list').innerHTML = html;
 }
 
 function exportData() {
@@ -1000,6 +1083,10 @@ function renderMonth(m) {
         prev+='<div class="ex-prev-item"><div class="ex-dot" style="background:'+m.color+'"></div><span>'+e.name+'</span></div>';
       });
       var more=w.exs.length-3;
+      var isFinished = localStorage.getItem('finished_'+w.id+'_w'+wk) === 'true';
+      var btnText = isFinished ? '✓ Завершено' : (pct>0 ? '▶ Продолжить' : '▶ Начать');
+      var btnStyle = isFinished ? 'background:var(--green)' : 'background:linear-gradient(135deg,'+m.color+','+m.dark+')';
+
       html+='<div class="wcard">' +
         '<div class="wcard-accent" style="background:linear-gradient(90deg,'+m.color+','+m.dark+')"></div>' +
         '<div class="wcard-body">' +
@@ -1009,8 +1096,8 @@ function renderMonth(m) {
           '</div>' +
           '<div class="ex-preview">'+prev+(more>0?'<div class="ex-more">+ ещё '+more+' упражнений</div>':'')+'</div>' +
           '<div class="wcard-footer">' +
-            '<div class="sets-count">'+total+' подходов'+(pct?' · '+pct+'% выполнено':' · не начато')+'</div>' +
-            '<button class="start-btn" style="background:linear-gradient(135deg,'+m.color+','+m.dark+')" onclick="event.stopPropagation();openWorkout(\''+w.id+'\','+wk+')">'+(pct>0?'▶ Продолжить':'▶ Начать')+'</button>' +
+            '<div class="sets-count">'+total+' подходов'+(isFinished?' · завершено':(pct?' · '+pct+'% выполнено':' · не начато'))+'</div>' +
+            '<button class="start-btn" style="'+btnStyle+'" onclick="event.stopPropagation();openWorkout(\''+w.id+'\','+wk+')">'+btnText+'</button>' +
           '</div>' +
         '</div></div>';
     });
@@ -1044,12 +1131,12 @@ function renderExs() {
   var uw=getWeights();
   var html='';
   w.exs.forEach(function(ex,ei){
-    var arr = uw[ex.id];
+    var arr = uw[ex.name]; // Global by name
     var isArr = Array.isArray(arr);
 
     var setsHtml='';
     ex.sets.forEach(function(set,si){
-      var gw = { w: '', d: '' };
+      var gw = { w: '', d: '', r: '' };
       if (isArr && arr[si]) {
          gw = arr[si];
       } else if (!isArr && arr) {
@@ -1069,51 +1156,69 @@ function renderExs() {
       var st=wState[k]||{};
       var done=!!st.done;
       var diff=st.diff||'';
+      
       var wv=st.weight;
       if(wv===undefined) wv=gw.w;
+      
+      var rv=st.reps;
+      if(rv===undefined) rv=gw.r;
+
       var noW=!!ex.nw;
       var rStr = set.r.toLowerCase();
       var isTime = rStr.includes('сек') || rStr.includes('sec') || rStr.includes('мин') || rStr.includes('min');
-      var repsHtml = '<div class="set-reps'+(done?' done-t':'')+'" id="rp_'+k+'">'+set.r+'</div>';
+
+      var defaultRep = '';
+      var mNum = set.r.match(/\d+/);
+      if (mNum) defaultRep = mNum[0];
+      if (!rv && !isTime) rv = defaultRep;
+
+      var repsHtml = '';
       if(isTime) {
-        var nums = set.r.match(/\d+/g);
-        if(nums && nums.length > 0) {
-          var minT = parseInt(nums[0]);
-          var maxT = nums.length > 1 ? parseInt(nums[1]) : minT;
-          if(rStr.includes('мин') || rStr.includes('min')) { minT *= 60; maxT *= 60; }
-          repsHtml = '<div class="set-reps time-set'+(done?' done-t':'')+'" id="rp_'+k+'" onclick="toggleSetTimer(\''+k+'\','+minT+','+maxT+',\''+set.r+'\',\''+ex.id+'\','+si+')"><span>▶</span> <span id="rtxt_'+k+'">'+set.r+'</span></div>';
-        }
+        var minT = parseInt(mNum[0]);
+        var maxT = mNum.length > 1 ? parseInt(set.r.match(/\d+/g)[1]) : minT;
+        if(rStr.includes('мин') || rStr.includes('min')) { minT *= 60; maxT *= 60; }
+        repsHtml = '<div class="set-reps time-set'+(done?' done-t':'')+'" id="rp_'+k+'" onclick="toggleSetTimer(\''+k+'\','+minT+','+maxT+',\''+set.r+'\',\''+ex.id+'\','+si+')"><span>▶</span> <span id="rtxt_'+k+'">'+set.r+'</span></div>';
+      } else {
+        repsHtml = '<div style="display:flex;align-items:center;gap:4px;justify-content:center"><div style="font-size:10px;color:var(--text3);width:28px;text-align:right;line-height:1">'+set.r+'</div><input class="w-inp'+(rv?' hv':'')+'" style="width:40px;padding:0 4px;text-align:center" type="number" inputmode="decimal" placeholder="повт" value="'+(rv||'')+'" id="rinp_'+k+'" oninput="onRInp(\''+k+'\',\''+ex.id+'\',\''+ex.name+'\','+si+',this.value)" onchange="onRChange(\''+k+'\',\''+ex.id+'\',\''+ex.name+'\','+si+',this.value)" onfocus="scr(this)"></div>';
       }
+
       setsHtml+='<div class="set-row'+(done?' done':'')+'" id="row_'+k+'">' +
         '<div class="set-num"><span>'+(si+1)+'</span>'+markerHtml+'</div>' +
         repsHtml +
         '<div>'+(noW
           ? '<div style="text-align:center;font-size:12px;color:var(--text3)">—</div>'
-          : '<input class="w-inp'+(wv?' hv':'')+'" type="number" inputmode="decimal" placeholder="кг" value="'+wv+'" id="inp_'+k+'" oninput="onWInp(\''+k+'\',\''+ex.id+'\','+si+',this.value)" onchange="onWChange(\''+k+'\',\''+ex.id+'\','+si+',this.value)" onfocus="scr(this)">'
+          : '<input class="w-inp'+(wv?' hv':'')+'" type="number" inputmode="decimal" placeholder="кг" value="'+wv+'" id="inp_'+k+'" oninput="onWInp(\''+k+'\',\''+ex.id+'\',\''+ex.name+'\','+si+',this.value)" onchange="onWChange(\''+k+'\',\''+ex.id+'\',\''+ex.name+'\','+si+',this.value)" onfocus="scr(this)">'
         )+'</div>' +
         '<div class="diff-wrap">' +
-          '<div class="d-btn down'+(diff==='down'?' active':'')+'" id="d_down_'+k+'" onclick="togD(\''+ex.id+'\','+si+',\'down\')">↓</div>' +
-          '<div class="d-btn ok'+(diff==='ok'?' active':'')+'" id="d_ok_'+k+'" onclick="togD(\''+ex.id+'\','+si+',\'ok\')">✓</div>' +
-          '<div class="d-btn up'+(diff==='up'?' active':'')+'" id="d_up_'+k+'" onclick="togD(\''+ex.id+'\','+si+',\'up\')">↑</div>' +
+          '<div class="d-btn down'+(diff==='down'?' active':'')+'" id="d_down_'+k+'" onclick="togD(\''+ex.id+'\',\''+ex.name+'\','+si+',\'down\')">↓</div>' +
+          '<div class="d-btn ok'+(diff==='ok'?' active':'')+'" id="d_ok_'+k+'" onclick="togD(\''+ex.id+'\',\''+ex.name+'\','+si+',\'ok\')">✓</div>' +
+          '<div class="d-btn up'+(diff==='up'?' active':'')+'" id="d_up_'+k+'" onclick="togD(\''+ex.id+'\',\''+ex.name+'\','+si+',\'up\')">↑</div>' +
         '</div>' +
       '</div>';
     });
+    
+    var prevStats = '';
+    if (gw && (gw.w || gw.r)) {
+      prevStats = '<div style="font-size:12px;color:var(--text3);margin-top:-3px;margin-bottom:8px">Прошлый раз: '+(gw.w?gw.w+' кг':'')+(gw.w&&gw.r?' × ':'')+(gw.r?gw.r+' повт':'')+'</div>';
+    }
+
     html+='<div class="ex-block">' +
       '<div class="ex-hdr">' +
         '<div class="ex-num">Упражнение '+(ei+1)+' из '+w.exs.length+'</div>' +
         '<div class="ex-name">'+ex.name+'</div>' +
         (ex.ss?'<div class="superset-tag">'+ex.ss+'</div>':'') +
         (ex.note?'<div class="ex-note">💡 '+ex.note+'</div>':'') +
+        prevStats +
       '</div>' +
       '<div class="sets-tbl">' +
-        '<div class="sets-hdr"><div class="ch">#</div><div>Повторения</div><div class="ch">Вес</div><div style="text-align:center">↓ ✓ ↑</div></div>' +
+        '<div class="sets-hdr"><div class="ch">#</div><div style="text-align:center">Повторения</div><div class="ch">Вес</div><div style="text-align:center">↓ ✓ ↑</div></div>' +
         setsHtml +
       '</div></div>';
   });
   document.getElementById('exs-wrap').innerHTML=html;
 }
 
-function togD(exId, si, d) {
+function togD(exId, exName, si, d) {
   var k=exId+'_'+si;
   var st=wState[k]||{};
   var isSame = st.diff === d;
@@ -1139,30 +1244,35 @@ function togD(exId, si, d) {
     playSound('init');
     startRest(newD);
     var inp=document.getElementById('inp_'+k);
-    if(inp && inp.value) saveWeight(exId, si, inp.value, newD);
+    var rinp=document.getElementById('rinp_'+k);
+    var wv = inp ? inp.value : undefined;
+    var rv = rinp ? rinp.value : undefined;
+    if((wv || rv) && newD) saveUW(exName, si, wv, newD, rv);
   }
 }
 
 function getMaxW() {
   try { return JSON.parse(localStorage.getItem('max_w')) || {}; } catch(e){ return {}; }
 }
-function onWInp(k, exId, si, v) {
+function onWInp(k, exId, exName, si, v) {
   var st=wState[k]||{};
   wState[k]=Object.assign({},st,{weight:v});
   var inp=document.getElementById('inp_'+k);
   if(inp) {
     inp.classList.toggle('hv',!!v);
-    var mw = getMaxW()[exId] || 0;
+    var mw = getMaxW()[exName] || 0;
     var numV = parseFloat(v);
     inp.classList.toggle('pr-glow', v && !isNaN(numV) && numV > mw && mw > 0);
   }
   saveWS();
 }
 
-function onWChange(k, exId, si, v) {
+function onWChange(k, exId, exName, si, v) {
   var st=wState[k]||{};
   if(v) {
-    saveWeight(exId, si, v, st.diff);
+    var rinp=document.getElementById('rinp_'+k);
+    var rv = rinp ? rinp.value : undefined;
+    saveUW(exName, si, v, st.diff, rv);
     var ex = curWorkout.exs.find(function(e){return e.id===exId;});
     if (ex) {
       for(var i=si+1; i<ex.sets.length; i++) {
@@ -1174,7 +1284,45 @@ function onWChange(k, exId, si, v) {
               nInp.value = v;
               nInp.classList.add('hv');
               wState[nK] = Object.assign({}, nSt, {weight: v});
-              saveWeight(exId, i, v, nSt.diff);
+              var nrinp = document.getElementById('rinp_'+nK);
+              var nrv = nrinp ? nrinp.value : undefined;
+              saveUW(exName, i, v, nSt.diff, nrv);
+           }
+        }
+      }
+      saveWS();
+    }
+  }
+}
+
+function onRInp(k, exId, exName, si, v) {
+  var st=wState[k]||{};
+  wState[k]=Object.assign({},st,{reps:v});
+  var inp=document.getElementById('rinp_'+k);
+  if(inp) inp.classList.toggle('hv',!!v);
+  saveWS();
+}
+
+function onRChange(k, exId, exName, si, v) {
+  var st=wState[k]||{};
+  if(v) {
+    var winp=document.getElementById('inp_'+k);
+    var wv = winp ? winp.value : undefined;
+    saveUW(exName, si, wv, st.diff, v);
+    var ex = curWorkout.exs.find(function(e){return e.id===exId;});
+    if (ex) {
+      for(var i=si+1; i<ex.sets.length; i++) {
+        var nK = exId+'_'+i;
+        var nSt = wState[nK] || {};
+        if (!nSt.reps) {
+           var nInp = document.getElementById('rinp_'+nK);
+           if (nInp && !nInp.value) {
+              nInp.value = v;
+              nInp.classList.add('hv');
+              wState[nK] = Object.assign({}, nSt, {reps: v});
+              var nwinp = document.getElementById('inp_'+nK);
+              var nwv = nwinp ? nwinp.value : undefined;
+              saveUW(exName, i, nwv, nSt.diff, v);
            }
         }
       }
@@ -1283,6 +1431,7 @@ function finishWorkout() {
   }
 
   document.getElementById('c-sub').textContent=curWorkout.label+' · Неделя '+curWeek;
+  localStorage.setItem('finished_'+curWorkout.id+'_w'+curWeek, 'true');
   saveHistory({wid:curWorkout.id+'_w'+curWeek,label:curWorkout.label+' (Неделя '+curWeek+')',month:curMonth.title,color:curMonth.color,date:new Date().toISOString(),done:done,total:total,mins:m,exs:doneExs,tonnage:curTonnage});
   var aiBtn = document.getElementById('c-ai-btn');
   if(aiBtn) aiBtn.style.display = localStorage.getItem('gemini_key') ? 'block' : 'none';
@@ -1453,6 +1602,7 @@ window.addEventListener('popstate', function(e) {
     showScreen(s, true);
     document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
     if(s==='home') { renderHome(); document.getElementById('nav-home').classList.add('active'); }
+    else if(s==='library') { renderLibrary(); document.getElementById('nav-lib').classList.add('active'); }
     else if(s==='history-screen') { renderHistory(); document.getElementById('nav-hist').classList.add('active'); }
     else if(s==='profile-screen') { document.getElementById('nav-prof').classList.add('active'); }
   }
@@ -1506,6 +1656,66 @@ function checkChangelog() {
 
 checkChangelog();
 checkForUpdates();
+
+// FEEDBACK LOGIC
+function closeFeedback() {
+    document.getElementById('feedbackModal').classList.remove('show');
+    document.getElementById('feedbackTextarea').value = '';
+    document.getElementById('feedbackImageInput').value = '';
+    document.getElementById('feedbackImagePreview').src = '';
+    document.getElementById('feedbackImagePreview').style.display = 'none';
+}
+
+document.getElementById('feedbackImageInput').addEventListener('change', function(e) {
+    var file = e.target.files[0];
+    if (file) {
+        var reader = new FileReader();
+        reader.onload = function(evt) {
+            document.getElementById('feedbackImagePreview').src = evt.target.result;
+            document.getElementById('feedbackImagePreview').style.display = 'block';
+        };
+        reader.readAsDataURL(file);
+    }
+});
+
+async function sendFeedback() {
+    var text = document.getElementById('feedbackTextarea').value.trim();
+    var file = document.getElementById('feedbackImageInput').files[0];
+    if (!text && !file) return;
+    
+    if (navigator.vibrate) navigator.vibrate(30);
+    var btn = document.getElementById('sendFeedbackBtn');
+    btn.textContent = 'Отправка...';
+    btn.style.opacity = '0.5';
+
+    var token = '8913559777:AAFdTyeWU91lq-kfGVVakTF66r50tfHGOpQ';
+    var chatId = '660179360';
+    var caption = '🚨 Фидбек из Workout Tracker:\n\n' + text;
+
+    try {
+        if (file) {
+            var formData = new FormData();
+            formData.append('chat_id', chatId);
+            formData.append('caption', caption);
+            formData.append('photo', file);
+            
+            await fetch('https://api.telegram.org/bot' + token + '/sendPhoto', {
+                method: 'POST',
+                body: formData
+            });
+        } else {
+            var msg = encodeURIComponent(caption);
+            await fetch('https://api.telegram.org/bot' + token + '/sendMessage?chat_id=' + chatId + '&text=' + msg);
+        }
+        showToast('Отправлено! Спасибо!');
+        closeFeedback();
+    } catch (e) {
+        showToast('Ошибка отправки =(');
+    } finally {
+        btn.textContent = 'Отправить';
+        btn.style.opacity = '1';
+    }
+}
 
 // Register service worker for offline use
 if ('serviceWorker' in navigator) {
