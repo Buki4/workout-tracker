@@ -1,475 +1,3 @@
-<!DOCTYPE html>
-<html lang="ru">
-<head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#0d0d14">
-<link rel="manifest" href="manifest.json">
-<meta name="apple-mobile-web-app-title" content="Тренировки">
-<link rel="apple-touch-icon" href="icon-192.png">
-<title>Программа тренировок</title>
-<style>
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
-:root {
-  --bg:#0d0d14; --bg2:#13131f; --card:#16162a; --card2:#1e1e35;
-  --border:rgba(255,255,255,0.07); --text:#f0f0ff; --text2:#9090b8; --text3:#5a5a80;
-  --accent:#6C63FF; --accent2:#8b85ff; --green:#10b981; --orange:#f97316;
-  --radius:16px; --radius-sm:10px; --safe-b:env(safe-area-inset-bottom,0px);
-}
-*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
-html{font-family:'Inter',system-ui,sans-serif;background:var(--bg);color:var(--text);scroll-behavior:smooth}
-body{min-height:100dvh;overscroll-behavior:none;-webkit-tap-highlight-color:transparent}
-::-webkit-scrollbar{width:0}
-
-/* SCREENS */
-.screen{display:none;min-height:100dvh;flex-direction:column}
-.screen.active{display:flex}
-@keyframes slideUp{from{transform:translateY(24px);opacity:0}to{transform:translateY(0);opacity:1}}
-.slide-in{animation:slideUp 0.26s cubic-bezier(.22,1,.36,1)}
-
-/* HOME */
-#home{background:radial-gradient(ellipse 80% 55% at 50% -5%,rgba(108,99,255,.22) 0%,transparent 65%),var(--bg);padding-bottom:calc(80px + var(--safe-b))}
-.home-header{padding:64px 24px 28px;text-align:center}
-.home-logo{width:68px;height:68px;background:linear-gradient(135deg,var(--accent),#a78bfa);border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:30px;margin:0 auto 18px;box-shadow:0 8px 32px rgba(108,99,255,.4)}
-.home-title{font-size:26px;font-weight:900;letter-spacing:-.5px;background:linear-gradient(135deg,#fff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.home-sub{font-size:14px;color:var(--text2);margin-top:6px}
-
-/* SCHEDULE STRIP */
-.schedule-strip{margin:0 20px 24px;background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:14px}
-.strip-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:10px}
-.strip-days{display:flex;gap:5px}
-.strip-day{flex:1;text-align:center;border-radius:8px;padding:8px 3px}
-.strip-day .dn{font-weight:700;color:var(--text2);font-size:9px;margin-bottom:3px}
-.strip-day .di{font-size:15px;line-height:1;display:block}
-.strip-day.strength{background:rgba(108,99,255,.15)}.strip-day.strength .dn{color:var(--accent2)}
-.strip-day.bike{background:rgba(249,115,22,.12)}.strip-day.bike .dn{color:#fb923c}
-.strip-day.hiit{background:rgba(239,68,68,.12)}.strip-day.hiit .dn{color:#f87171}
-.strip-day.hike{background:rgba(16,185,129,.12)}.strip-day.hike .dn{color:#34d399}
-
-/* SECTION LABEL */
-.section-label{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);padding:0 24px;margin-bottom:12px}
-
-/* MONTH CARDS */
-.months-list{display:flex;flex-direction:column;gap:10px;padding:0 20px}
-.month-card{border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;cursor:pointer;background:var(--card);transition:transform .15s;-webkit-tap-highlight-color:transparent}
-.month-card:active{transform:scale(.985)}
-.mc-accent{height:3px}
-.mc-inner{padding:18px}
-.mc-header{display:flex;align-items:center;gap:12px;margin-bottom:10px}
-.mc-badge{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:#fff;flex-shrink:0}
-.mc-meta{flex:1;min-width:0}
-.mc-title{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.mc-sub{font-size:12px;color:var(--text2);margin-top:2px}
-.mc-desc{font-size:12px;color:var(--text2);line-height:1.5;margin-bottom:12px}
-.mc-footer{display:flex;align-items:center;gap:8px}
-.weeks-badge{font-size:11px;font-weight:600;color:var(--text3);background:var(--card2);border-radius:6px;padding:4px 8px;white-space:nowrap}
-.prog-row{display:flex;align-items:center;gap:6px;flex:1}
-.prog-bar{flex:1;height:4px;background:rgba(255,255,255,.08);border-radius:99px;overflow:hidden}
-.prog-fill{height:100%;border-radius:99px;transition:width .4s}
-.prog-pct{font-size:11px;font-weight:600;color:var(--text2);min-width:28px;text-align:right}
-.arrow{color:var(--text3);font-size:18px;line-height:1}
-
-/* TOP BAR */
-.top-bar{display:flex;align-items:center;gap:10px;padding:54px 20px 14px;position:sticky;top:0;z-index:10;background:rgba(13,13,20,.95);border-bottom:1px solid var(--border);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px)}
-.back-btn{width:38px;height:38px;border-radius:10px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:18px;flex-shrink:0;transition:background .15s}
-.back-btn:active{background:var(--card)}
-.tbi{flex:1;min-width:0}
-.tbi-title{font-size:16px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tbi-sub{font-size:12px;color:var(--text2);margin-top:1px}
-
-/* MONTH SCREEN */
-#month-screen{background:var(--bg);padding-bottom:calc(80px + var(--safe-b))}
-.month-desc-card{margin:16px 20px;background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:14px;font-size:13px;color:var(--text2);line-height:1.6}
-.workouts-list{padding:0 20px;display:flex;flex-direction:column;gap:10px}
-.wcard{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden;transition:transform .15s;-webkit-tap-highlight-color:transparent}
-.wcard:active{transform:scale(.988)}
-.wcard-accent{height:3px}
-.wcard-body{padding:16px}
-.wcard-header{display:flex;align-items:center;gap:10px;margin-bottom:10px}
-.wday-badge{padding:5px 10px;border-radius:8px;font-size:12px;font-weight:700;color:#fff;flex-shrink:0}
-.wcard-title{font-size:15px;font-weight:700}
-.wcard-sub{font-size:12px;color:var(--text2);margin-top:2px}
-.ex-preview{display:flex;flex-direction:column;gap:5px;margin-bottom:12px}
-.ex-prev-item{display:flex;align-items:center;gap:8px;font-size:12px;color:var(--text2)}
-.ex-dot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
-.ex-more{font-size:11px;color:var(--text3);font-weight:500;padding-left:13px}
-.wcard-footer{display:flex;align-items:center;justify-content:space-between}
-.sets-count{font-size:12px;color:var(--text3)}
-.start-btn{padding:8px 14px;border-radius:8px;font-size:13px;font-weight:600;color:#fff;border:none;cursor:pointer;transition:opacity .15s,transform .1s;-webkit-tap-highlight-color:transparent}
-.start-btn:active{transform:scale(.95);opacity:.85}
-
-/* WORKOUT SCREEN */
-#workout-screen{background:var(--bg);padding-bottom:calc(80px + var(--safe-b))}
-.workout-top{padding:54px 20px 0;background:var(--bg2)}
-.workout-topbar{display:flex;align-items:center;gap:10px;border-bottom:1px solid var(--border);padding-bottom:12px}
-.reset-btn{width:38px;height:38px;border-radius:10px;background:var(--card2);border:1px solid var(--border);display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:16px;flex-shrink:0;color:var(--text2)}
-.warm-card{margin:12px 0 0;background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:11px 13px;display:flex;align-items:flex-start;gap:8px;font-size:12px;color:var(--text2);line-height:1.5}
-.timer-bar{margin:8px 0 0;background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:11px 13px;display:flex;align-items:center;gap:10px}
-.timer-val{font-size:26px;font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:-1px;min-width:68px;color:var(--text);transition:color .3s}
-.timer-val.running{color:var(--green)}
-.rest-badge{display:flex;align-items:center;gap:5px;background:rgba(10,132,255,.15);color:#0a84ff;padding:6px 12px;border-radius:20px;font-weight:700;font-size:14px;cursor:pointer}
-.rest-badge.done{background:rgba(48,209,88,.15);color:#30d158;animation:pulse 1.5s infinite}
-@keyframes pulse{0%{opacity:1}50%{opacity:.5}100%{opacity:1}}
-.w-notes{background:var(--card2);border:1.5px solid var(--border);border-radius:8px;padding:12px;font-size:14px;font-family:inherit;color:var(--text);width:100%;height:80px;resize:none;transition:border-color .15s;margin-top:10px}
-.w-notes:focus{outline:none;border-color:var(--accent)}
-.timer-label{font-size:12px;color:var(--text2);flex:1}
-.tbtn{width:38px;height:38px;border-radius:9px;display:flex;align-items:center;justify-content:center;cursor:pointer;border:none;font-size:16px;transition:opacity .15s,transform .1s}
-.tbtn:active{transform:scale(.9)}
-.tbtn.play{background:var(--green);color:#fff}
-.tbtn.pause{background:rgba(249,115,22,.2);color:var(--orange)}
-.tbtn.rst{background:var(--card2);color:var(--text2)}
-.rest-bar{height:3px;background:rgba(255,255,255,.07);border-radius:99px;overflow:hidden;margin-top:2px}
-.rest-fill{height:100%;border-radius:99px;background:var(--orange);transition:width .1s linear;width:0%}
-
-/* EXERCISES */
-.exs-wrap{padding:14px 20px;display:flex;flex-direction:column;gap:12px}
-.ex-block{background:var(--card);border-radius:var(--radius);border:1px solid var(--border);overflow:hidden}
-.ex-hdr{padding:13px 15px 10px;border-bottom:1px solid var(--border)}
-.ex-num{font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--text3);margin-bottom:3px}
-.ex-name{font-size:14px;font-weight:700;line-height:1.35}
-.ex-note{font-size:12px;color:var(--text2);margin-top:5px;line-height:1.4}
-.superset-tag{display:inline-block;background:rgba(249,115,22,.15);color:#fb923c;font-size:10px;font-weight:700;padding:2px 7px;border-radius:5px;text-transform:uppercase;letter-spacing:.05em;margin-top:4px}
-.sets-tbl{padding:0 10px 10px}
-.sets-hdr{display:grid;grid-template-columns:34px 1fr 66px 108px;gap:6px;padding:8px 4px 5px;font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.07em;color:var(--text3)}
-.sets-hdr .ch{text-align:center}
-.set-row{display:grid;grid-template-columns:34px 1fr 66px 108px;gap:6px;align-items:center;padding:5px 4px;border-radius:8px;transition:background .15s}
-.set-row.done{background:rgba(16,185,129,.07)}
-.set-num{font-size:12px;font-weight:600;color:var(--text3);display:flex;align-items:center;justify-content:center}
-.set-reps{font-size:13px;font-weight:500;transition:color .15s}
-.set-reps.done-t{color:var(--text3);text-decoration:line-through}
-.time-set{color:var(--accent2);cursor:pointer;font-weight:700;display:flex;align-items:center;gap:4px;user-select:none}
-.time-set:active{opacity:0.7}
-.active-timer{color:#fbbf24 !important}
-.w-inp{background:var(--card2);border:1.5px solid var(--border);border-radius:8px;padding:4px 4px;font-size:16px;font-weight:600;color:var(--text);width:100%;text-align:center;font-family:inherit;-webkit-appearance:none;transition:border-color .15s;transform-origin:center;transform:scale(0.82);}
-.w-inp:focus{outline:none;border-color:var(--accent)}
-.w-inp.hv{border-color:rgba(108,99,255,.4);color:var(--accent2)}
-.w-inp.pr-glow{border-color:#fbbf24;box-shadow:0 0 8px rgba(251,191,36,.5);color:#f59e0b}
-.w-inp::placeholder{color:var(--text3);font-weight:400;font-size:11px}
-.timer-adj{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:6px;padding:4px 8px;font-size:14px;font-weight:600;margin:0 5px;cursor:pointer}
-.timer-adj:active{background:rgba(255,255,255,.2)}
-.theme-cir{width:36px;height:36px;border-radius:50%;cursor:pointer;border:2px solid transparent;transition:transform .15s}
-.theme-cir:active{transform:scale(.9)}
-.chart-bar{width:30px;background:var(--accent);border-radius:4px 4px 0 0;position:relative;display:flex;justify-content:center;min-height:4px;transition:height .3s}
-.chart-lbl{position:absolute;top:-20px;font-size:10px;color:var(--text2);font-weight:700}
-.diff-wrap{display:flex;gap:6px;justify-content:flex-end}
-.d-btn{width:32px;height:32px;border-radius:8px;background:var(--card2);border:1px solid rgba(255,255,255,.1);display:flex;align-items:center;justify-content:center;color:var(--text3);font-size:16px;font-weight:700;cursor:pointer;transition:all .15s;user-select:none;-webkit-tap-highlight-color:transparent}
-.d-btn:active{transform:scale(.9)}
-.d-btn.active.down{background:rgba(255,69,58,.15);border-color:#ff453a;color:#ff453a}
-.d-btn.active.ok{background:rgba(48,209,88,.15);border-color:#30d158;color:#30d158}
-.d-btn.active.up{background:rgba(10,132,255,.15);border-color:#0a84ff;color:#0a84ff}
-
-/* COOLDOWN */
-.cool-wrap{margin:0 20px 4px}
-
-/* FINISH BAR */
-.finish-bar{position:fixed;bottom:0;left:0;right:0;padding:14px 20px calc(14px + var(--safe-b));background:linear-gradient(to top,var(--bg) 55%,transparent);display:flex}
-.finish-btn{background:var(--accent);flex:1;padding:15px;border-radius:var(--radius);font-size:15px;font-weight:700;color:#fff;border:none;cursor:pointer;transition:all .15s;-webkit-tap-highlight-color:transparent}
-.finish-btn.all-done{background:var(--green);box-shadow:0 0 16px rgba(48,209,88,.4)}
-.finish-btn:active{transform:scale(.97);opacity:.9}
-
-/* COMPLETE OVERLAY */
-.complete-overlay{position:fixed;inset:0;z-index:100;background:rgba(0,0,0,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);display:none;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center}
-.complete-overlay.show{display:flex}
-@keyframes pop{from{transform:scale(.5);opacity:0}to{transform:scale(1);opacity:1}}
-.c-emoji{font-size:68px;margin-bottom:18px;animation:pop .4s cubic-bezier(.34,1.56,.64,1)}
-.c-title{font-size:26px;font-weight:900;margin-bottom:8px;background:linear-gradient(135deg,#fff,#a78bfa);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
-.c-sub{font-size:14px;color:var(--text2);margin-bottom:28px;line-height:1.5}
-.c-stats{display:flex;gap:12px;margin-bottom:28px;width:100%}
-.c-stat{flex:1;background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:14px 8px}
-.c-stat-v{font-size:22px;font-weight:800}
-.c-stat-l{font-size:10px;color:var(--text3);margin-top:3px;font-weight:500}
-.c-close{width:100%;padding:15px;border-radius:var(--radius);font-size:16px;font-weight:700;color:#fff;background:linear-gradient(135deg,var(--accent),#a78bfa);border:none;cursor:pointer;box-shadow:0 8px 32px rgba(108,99,255,.4)}
-
-/* HISTORY */
-#history-screen{background:var(--bg);padding-bottom:calc(80px + var(--safe-b))}
-#profile-screen{background:var(--bg);padding-bottom:calc(80px + var(--safe-b))}
-.hist-list{padding:14px 20px;display:flex;flex-direction:column;gap:8px}
-.hist-card{background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:13px 14px;display:flex;align-items:center;gap:10px}
-.hist-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
-.hist-info{flex:1;min-width:0}
-.hist-name{font-size:13px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.hist-date{font-size:11px;color:var(--text2);margin-top:2px}
-.hist-badge{font-size:11px;font-weight:700;padding:4px 8px;border-radius:6px;background:rgba(16,185,129,.15);color:var(--green);white-space:nowrap}
-.empty-state{text-align:center;padding:60px 24px;display:flex;flex-direction:column;align-items:center;gap:10px}
-.empty-icon{font-size:44px}
-.empty-title{font-size:17px;font-weight:700}
-.empty-sub{font-size:13px;color:var(--text2);line-height:1.5}
-
-/* BOTTOM NAV */
-.bottom-nav{position:fixed;bottom:0;left:0;right:0;background:rgba(13,13,20,.94);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);border-top:1px solid var(--border);display:flex;padding-bottom:var(--safe-b);z-index:50}
-.nav-item{flex:1;padding:10px 8px 12px;display:flex;flex-direction:column;align-items:center;gap:3px;cursor:pointer;border:none;background:none;-webkit-tap-highlight-color:transparent}
-.nav-icon{font-size:22px;line-height:1}
-.nav-label{font-size:10px;font-weight:600;color:var(--text3)}
-.nav-item.active .nav-label{color:var(--accent2)}
-
-/* TOAST */
-.toast{position:fixed;bottom:calc(70px + var(--safe-b));left:50%;transform:translateX(-50%) translateY(16px);background:var(--card2);border:1px solid var(--border);border-radius:12px;padding:10px 18px;font-size:13px;font-weight:600;white-space:nowrap;z-index:200;opacity:0;transition:all .22s;pointer-events:none}
-.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
-
-.ai-modal{display:none;position:fixed;inset:0;z-index:300;background:rgba(0,0,0,.85);backdrop-filter:blur(15px);-webkit-backdrop-filter:blur(15px);flex-direction:column;align-items:center;justify-content:center;padding:24px;opacity:0;transition:opacity .25s}
-.ai-modal.show{display:flex;opacity:1}
-
-.sp{height:14px}
-</style>
-</head>
-<body>
-
-<!-- PROGRAMS LIST (NEW HOME) -->
-<div id="home-screen" class="screen active">
-  <div class="top-bar">
-    <div class="tbi">
-      <div class="tbi-title">Мои программы</div>
-      <div class="tbi-sub">Ваши планы тренировок</div>
-    </div>
-  </div>
-  <div style="padding:20px;padding-top:100px;display:flex;flex-direction:column;gap:15px;padding-bottom:100px" id="programs-list"></div>
-</div>
-
-<!-- PROGRAM SCREEN (OLD HOME) -->
-<div id="program-screen" class="screen">
-  <div class="top-bar">
-    <div class="back-btn" onclick="navTo('home-screen')" style="margin-right:15px;color:var(--text);font-size:20px;background:none;border:none;">←</div>
-    <div class="tbi">
-      <div class="tbi-title" id="hs-title">Программа тренировок</div>
-      <div class="tbi-sub" id="hs-subtitle"></div>
-    </div>
-  </div>
-  <div class="section-label" style="margin-top:20px;padding:0 20px;">Месяцы / Блоки</div>
-  <div class="months-list" id="months-list"></div>
-  <div class="sp"></div>
-</div>
-<!-- MONTH SCREEN -->
-<div id="month-screen" class="screen">
-  <div class="top-bar">
-    <div class="back-btn" onclick="goHome()">←</div>
-    <div class="tbi">
-      <div class="tbi-title" id="ms-title"></div>
-      <div class="tbi-sub" id="ms-sub"></div>
-    </div>
-  </div>
-  <div class="month-desc-card" id="ms-desc"></div>
-  <div class="workouts-list" id="workouts-list"></div>
-  <div class="sp"></div>
-</div>
-
-<!-- WORKOUT SCREEN -->
-<div id="workout-screen" class="screen">
-  <div class="workout-top">
-    <div class="workout-topbar">
-      <div class="back-btn" onclick="goMonth()">←</div>
-      <div class="tbi">
-        <div class="tbi-title" id="ws-title"></div>
-        <div class="tbi-sub" id="ws-sub"></div>
-      </div>
-      <div class="reset-btn" onclick="confirmReset()">↺</div>
-    </div>
-    <div class="warm-card"><span style="font-size:18px;flex-shrink:0">🔥</span><span id="warmup-text"></span></div>
-    <div class="timer-bar">
-      <div style="flex:1">
-        <div class="timer-val" id="timer-val">00:00</div>
-        <div class="timer-label">Время тренировки</div>
-      </div>
-      <div id="rest-badge" class="rest-badge" style="display:none; cursor:default; padding-left:5px; padding-right:5px">
-        <button class="timer-adj" onclick="adjRest(-30)">-30</button>
-        <div onclick="stopRest()" style="cursor:pointer; display:flex; align-items:center; gap:5px"><span>⏱</span> <span id="rest-val">01:30</span></div>
-        <button class="timer-adj" onclick="adjRest(30)">+30</button>
-      </div>
-      <button class="tbtn play" id="tplay" onclick="timerToggle()">▶</button>
-      <button class="tbtn rst" onclick="timerReset()">⟳</button>
-    </div>
-    <div class="rest-bar"><div class="rest-fill" id="rest-fill"></div></div>
-  </div>
-  <div class="exs-wrap" id="exs-wrap"></div>
-  <div class="cool-wrap">
-    <div class="warm-card"><span style="font-size:18px;flex-shrink:0">❄️</span><span id="cooldown-text"></span></div>
-    <textarea id="workout-notes" class="w-notes" placeholder="Заметки к тренировке... (плохо спал, мало сил и т.д.)" oninput="onNotesInput(this.value)"></textarea>
-  </div>
-  <div class="sp"></div>
-  <div class="finish-bar">
-    <button class="finish-btn" id="finish-btn" onclick="finishWorkout()">✅ Завершить тренировку</button>
-  </div>
-</div>
-
-<!-- HISTORY SCREEN -->
-<div id="library-screen" class="screen">
-  <div class="top-bar">
-    <div class="tbi">
-      <div class="tbi-title">Библиотека</div>
-      <div class="tbi-sub">Все упражнения из программы</div>
-    </div>
-  </div>
-  <div style="padding:20px;padding-top:100px;display:flex;flex-direction:column;gap:15px;padding-bottom:100px" id="lib-list"></div>
-</div>
-
-<div id="history-screen" class="screen">
-  <div class="top-bar">
-    <div class="tbi">
-      <div class="tbi-title">История</div>
-      <div class="tbi-sub" id="hist-sub"></div>
-    </div>
-    <div class="back-btn" onclick="clearHistory()" style="background:rgba(239,68,68,.1);border-color:rgba(239,68,68,.2);color:#f87171;font-size:15px">🗑</div>
-  </div>
-  <div class="hist-list" id="hist-list"></div>
-</div>
-
-<!-- PROFILE SCREEN -->
-<div id="profile-screen" class="screen">
-  <div class="top-bar">
-    <div class="tbi">
-      <div class="tbi-title">Профиль</div>
-      <div class="tbi-sub">Настройки и данные</div>
-    </div>
-  </div>
-  <div style="padding:20px;display:flex;flex-direction:column;gap:15px">
-    <div style="background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:20px;text-align:center">
-      <div style="font-size:48px;margin-bottom:10px">👤</div>
-      <input type="text" id="prof-name" placeholder="Твое имя (Атлет)" style="width:100%;text-align:center;font-size:20px;font-weight:800;border:none;background:transparent;color:var(--text);margin-bottom:5px;outline:none;font-family:inherit" oninput="saveName(this.value)">
-      <div style="display:flex; justify-content:center; gap:20px; margin-top:15px">
-        <div><div style="font-size:20px; font-weight:800; color:var(--accent)" id="prof-workouts">0</div><div style="font-size:12px; color:var(--text2)">Тренировок</div></div>
-        <div><div style="font-size:20px; font-weight:800; color:var(--green)" id="prof-tonnage">0</div><div style="font-size:12px; color:var(--text2)">Тонн поднято</div></div>
-      </div>
-    </div>
-    
-    <div style="background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:15px">
-      <div style="font-weight:700;margin-bottom:10px;font-size:16px">Тема оформления</div>
-      <div style="display:flex;gap:15px;justify-content:center;margin-bottom:5px">
-        <div class="theme-cir" style="background:#6c63ff" onclick="setTheme('#6c63ff','#817aff')"></div>
-        <div class="theme-cir" style="background:#f472b6" onclick="setTheme('#f472b6','#fbcfe8')"></div>
-        <div class="theme-cir" style="background:#10b981" onclick="setTheme('#10b981','#34d399')"></div>
-        <div class="theme-cir" style="background:#0ea5e9" onclick="setTheme('#0ea5e9','#38bdf8')"></div>
-        <div class="theme-cir" style="background:#f97316" onclick="setTheme('#f97316','#fb923c')"></div>
-      </div>
-    </div>
-
-    <div style="background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:15px">
-      <div style="font-weight:700;margin-bottom:15px;font-size:16px">Прогресс (тоннаж)</div>
-      <div id="prof-chart" style="display:flex;align-items:flex-end;justify-content:center;gap:10px;height:120px;padding-top:10px"></div>
-    </div>
-
-    <div style="background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:15px">
-      <div style="font-weight:700;margin-bottom:10px;font-size:16px">Сохранение истории</div>
-      <div style="color:var(--text2);font-size:13px;margin-bottom:15px;line-height:1.4">Данные хранятся в браузере. Если ты сменишь браузер или очистишь кэш, история удалится. Сохрани файл резервной копии!</div>
-      <button class="finish-btn" style="width:100%;background:var(--accent);margin-bottom:10px" onclick="exportData()">⬇️ Скачать резервную копию</button>
-      <input type="file" id="import-file" style="display:none" accept=".json" onchange="importData(event)">
-      <button class="finish-btn" style="width:100%;background:var(--card2);color:var(--text);border:1px solid var(--border)" onclick="document.getElementById('import-file').click()">⬆️ Загрузить из файла</button>
-    </div>
-    <div style="background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:15px">
-      <div style="font-weight:700;margin-bottom:10px;font-size:16px">Обратная связь</div>
-      <div style="color:var(--text2);font-size:13px;margin-bottom:15px;line-height:1.4">Нашел баг или есть идея для новой фичи? Напиши разработчику напрямую!</div>
-      <button class="finish-btn" style="width:100%;background:var(--card2);color:var(--text);border:1px solid var(--border)" onclick="document.getElementById('feedbackModal').classList.add('show'); setTimeout(()=>document.getElementById('feedbackTextarea').focus(),100)">💬 Оставить фидбек</button>
-    </div>
-
-    <div style="background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:15px">
-      <div style="font-weight:700;margin-bottom:10px;font-size:16px">Обновление</div>
-      <button class="finish-btn" style="width:100%;background:var(--card2);color:var(--text);border:1px solid var(--border);font-size:14px" onclick="forceUpdate()">🔄 Обновить приложение</button>
-    </div>
-
-    <div style="background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:15px">
-      <div style="font-weight:700;margin-bottom:6px;font-size:16px">🤖 ИИ-анализ прогресса</div>
-      <div style="color:var(--text2);font-size:13px;margin-bottom:12px;line-height:1.5">Вставь Gemini API ключ — ИИ будет анализировать твои тренировки и давать персональные советы. Ключ хранится только на твоём устройстве.</div>
-      <div style="display:flex;gap:8px;margin-bottom:10px">
-        <input type="password" id="gemini-key" placeholder="AIza..." style="flex:1;background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:10px 12px;font-size:14px;color:var(--text);font-family:inherit;outline:none" oninput="saveApiKey(this.value)">
-        <button onclick="toggleKeyVisibility()" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;padding:0 12px;color:var(--text2);font-size:16px;cursor:pointer" id="key-eye">👁</button>
-      </div>
-      <button class="finish-btn" style="width:100%;background:linear-gradient(135deg,var(--accent),#a78bfa)" onclick="runAiAnalysis()">✨ Анализировать мой прогресс</button>
-    </div>
-
-    <div style="text-align:center;margin-top:20px;color:var(--text2);font-size:12px;" id="app-version">v0.0.1</div>
-  </div>
-</div>
-
-<!-- COMPLETE OVERLAY -->
-<div class="complete-overlay" id="c-overlay">
-  <div class="c-emoji">🎉</div>
-  <div class="c-title">Тренировка выполнена!</div>
-  <div class="c-sub" id="c-sub"></div>
-  <div class="c-stats">
-    <div class="c-stat"><div class="c-stat-v" id="c-sets">0</div><div class="c-stat-l">подходов</div></div>
-    <div class="c-stat"><div class="c-stat-v" id="c-time">0:00</div><div class="c-stat-l">минут</div></div>
-    <div class="c-stat"><div class="c-stat-v" id="c-exs">0</div><div class="c-stat-l">упражнений</div></div>
-  </div>
-  <div id="c-prs" style="margin:15px 0;font-size:16px;font-weight:700;color:var(--accent);display:none">🏆 Новых рекордов: <span>0</span></div>
-  <button id="c-ai-btn" style="width:100%;padding:12px;border-radius:var(--radius);font-size:14px;font-weight:700;color:var(--accent2);background:rgba(108,99,255,.12);border:1px solid rgba(108,99,255,.25);cursor:pointer;margin-bottom:10px;display:none" onclick="runAiAnalysis()">✨ Что скажет ИИ о тренировке?</button>
-  <button class="c-close" onclick="closeComplete()">Отлично! 💪</button>
-</div>
-
-<!-- TOAST -->
-<div class="toast" id="toast"></div>
-
-<!-- UPDATE MODAL -->
-<div class="ai-modal" id="updatePromptModal">
-  <div class="ai-modal-content" style="max-width:320px;text-align:center">
-    <div style="font-size:32px;margin-bottom:10px">🚀</div>
-    <div style="font-weight:700;margin-bottom:10px;font-size:18px">Доступно обновление!</div>
-    <div style="font-size:14px;color:var(--text2);margin-bottom:20px;line-height:1.5">Вышла новая версия приложения: <span id="newVersionSpan" style="font-weight:600;color:var(--accent)">v0.0.0</span>. Обновить сейчас?</div>
-    <div style="display:flex;gap:10px">
-      <button class="ai-btn-close" style="flex:1" onclick="document.getElementById('updatePromptModal').classList.remove('show')">Позже</button>
-      <button class="ai-btn-close" style="flex:1;background:linear-gradient(135deg,var(--accent),#a78bfa);color:#fff" onclick="forceUpdate()">Обновить</button>
-    </div>
-  </div>
-</div>
-
-<!-- CHANGELOG MODAL -->
-<div class="ai-modal" id="changelogModal">
-  <div class="ai-modal-content" style="max-width:320px">
-    <div style="font-size:32px;margin-bottom:10px;text-align:center">✨</div>
-    <div style="font-weight:700;margin-bottom:15px;font-size:18px;text-align:center">Что нового в <span id="changelogVersionSpan">v0.0.0</span></div>
-    <div id="changelogText" style="font-size:14px;color:var(--text2);margin-bottom:20px;line-height:1.6;white-space:pre-wrap;text-align:left;background:var(--bg);padding:15px;border-radius:8px"></div>
-    <button class="ai-btn-close" style="width:100%" onclick="document.getElementById('changelogModal').classList.remove('show')">Понятно</button>
-  </div>
-</div>
-
-<!-- FEEDBACK MODAL -->
-<div class="ai-modal" id="feedbackModal">
-  <div class="ai-modal-content" style="max-width:320px">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:15px">
-      <div style="font-weight:700;font-size:18px">Обратная связь</div>
-      <button style="background:transparent;border:none;color:var(--text2);font-size:20px;cursor:pointer" onclick="closeFeedback()">✕</button>
-    </div>
-    <textarea id="feedbackTextarea" placeholder="Напиши сообщение..." style="width:100%;height:120px;background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:12px;font-family:inherit;font-size:14px;margin-bottom:12px;resize:none;outline:none"></textarea>
-    <input type="file" id="feedbackImageInput" accept="image/*" style="display:none">
-    <img id="feedbackImagePreview" style="display:none;width:100%;border-radius:8px;margin-bottom:16px;max-height:200px;object-fit:cover">
-    
-    <div style="display:flex;gap:10px">
-      <button id="attachImageBtn" style="background:var(--card2);border:1px solid var(--border);border-radius:8px;color:var(--text);padding:10px 15px;cursor:pointer;font-size:18px" onclick="document.getElementById('feedbackImageInput').click()">📎</button>
-      <button id="sendFeedbackBtn" style="flex:1;background:var(--accent);color:#fff;border:none;border-radius:8px;font-weight:600;font-size:14px;cursor:pointer" onclick="sendFeedback()">Отправить</button>
-    </div>
-  </div>
-</div>
-
-<!-- AI MODAL -->
-<div id="ai-modal" style="display:none;position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.88);backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);flex-direction:column;align-items:center;justify-content:center;padding:24px">
-  <div style="background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:24px;width:100%;max-width:420px;max-height:80vh;overflow-y:auto">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
-      <div style="font-weight:800;font-size:18px">🤖 ИИ-анализ</div>
-      <button onclick="document.getElementById('ai-modal').style.display='none'" style="background:none;border:none;color:var(--text2);font-size:24px;cursor:pointer;line-height:1">×</button>
-    </div>
-    <div id="ai-text" style="font-size:14px;color:var(--text2);line-height:1.7;white-space:pre-wrap"></div>
-  </div>
-</div>
-
-<!-- BOTTOM NAV -->
-<nav class="bottom-nav" id="bnav">
-  <button class="nav-item active" id="nav-home" onclick="navTo('home')">
-    <span class="nav-icon">🏠</span><span class="nav-label">Программа</span>
-  </button>
-  <button class="nav-item" id="nav-lib" onclick="navTo('library')">
-    <span class="nav-icon">📚</span><span class="nav-label">Библиотека</span>
-  </button>
-  <button class="nav-item" id="nav-hist" onclick="navTo('history')">
-    <span class="nav-icon">📋</span><span class="nav-label">История</span>
-  </button>
-  <button class="nav-item" id="nav-prof" onclick="navTo('profile')">
-    <span class="nav-icon">👤</span><span class="nav-label">Профиль</span>
-  </button>
-</nav>
-
-<script>
-// ─────────────────────────────────────────
-// PROGRAM DATA
-// ─────────────────────────────────────────
 const TEMPLATES = [
   {
     id: "prog_default",
@@ -873,17 +401,12 @@ function onNotesInput(v) {
 // ─────────────────────────────────────────
 // STORAGE
 // ─────────────────────────────────────────
-function getWsKey(id) {
-  if (P.instanceId === 'prog_default_1') return 'ws_' + id;
-  return 'ws_' + P.instanceId + '_' + id;
-}
-
 function saveWS() {
   if (!curWorkout || !curWeek) return;
-  try { localStorage.setItem(getWsKey(curWorkout.id+'_w'+curWeek), JSON.stringify(wState)); } catch(e){}
+  try { localStorage.setItem('ws_'+curWorkout.id+'_w'+curWeek, JSON.stringify(wState)); } catch(e){}
 }
 function loadWS(id) {
-  try { var r=localStorage.getItem(getWsKey(id)); return r?JSON.parse(r):{}; } catch(e){ return {}; }
+  try { var r=localStorage.getItem('ws_'+id); return r?JSON.parse(r):{}; } catch(e){ return {}; }
 }
 function getWeights() {
   try { var r=localStorage.getItem('uw'); return r?JSON.parse(r):{}; } catch(e){ return {}; }
@@ -955,76 +478,11 @@ function showScreen(id, fromPop) {
 }
 function navTo(tab) {
   document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
-  if(tab==='home-screen' || tab==='home'){
-    renderProgramsList();
-    showScreen('home-screen');
-    document.getElementById('nav-home').classList.add('active');
-  }
-  else if(tab==='program-screen'){
-    renderProgram();
-    showScreen('program-screen');
-    document.getElementById('nav-home').classList.add('active');
-  }
+  if(tab==='home'){renderHome();showScreen('home');document.getElementById('nav-home').classList.add('active');}
   else if(tab==='library'){renderLibrary();showScreen('library-screen');document.getElementById('nav-lib').classList.add('active');}
   else if(tab==='history'){renderHistory();showScreen('history-screen');document.getElementById('nav-hist').classList.add('active');}
   else if(tab==='profile'){showScreen('profile-screen');document.getElementById('nav-prof').classList.add('active');}
 }
-
-function renderProgramsList() {
-  var html = '<button class="btn" style="width:100%;margin-bottom:15px;background:var(--accent);color:#fff;border:none;" onclick="document.getElementById(\'create-prog-modal\').classList.add(\'show\');document.getElementById(\'create-prog-modal\').style.display=\'flex\';">✨ Создать программу</button>';
-  
-  userPrograms.forEach(function(prog) {
-    var isActive = prog.instanceId === activeProgId;
-    html += '<div style="background:var(--card);border-radius:var(--radius);padding:15px;border:1px solid '+(isActive?'var(--accent)':'var(--border)')+';cursor:pointer;" onclick="openProgram(\''+prog.instanceId+'\')">' +
-      '<div style="font-weight:700;font-size:16px;margin-bottom:5px">'+prog.name+'</div>' +
-      '<div style="font-size:13px;color:var(--text2);margin-bottom:10px">'+prog.desc.substring(0,80)+'...</div>' +
-      '<div style="display:flex;gap:10px;font-size:12px;color:var(--text3);font-weight:600;">' +
-        '<span style="background:var(--card2);padding:4px 8px;border-radius:10px">'+prog.days+' дня/нед</span>' +
-        '<span style="background:var(--card2);padding:4px 8px;border-radius:10px">'+(prog.location==='gym'?'В зале':'Дома')+'</span>' +
-      '</div>' +
-    '</div>';
-  });
-  
-  document.getElementById('programs-list').innerHTML = html;
-}
-
-function openProgram(id) {
-  activeProgId = id;
-  localStorage.setItem('activeProgId', id);
-  P = userPrograms.find(function(p){return p.instanceId===id;});
-  navTo('program-screen');
-}
-
-function toggleCpEq() {
-  var loc = document.getElementById('cp-location').value;
-  document.getElementById('cp-eq-wrap').style.display = loc === 'home' ? 'block' : 'none';
-}
-
-function generateProgram() {
-  var loc = document.getElementById('cp-location').value;
-  var days = parseInt(document.getElementById('cp-days').value);
-  var focus = document.getElementById('cp-focus').value;
-  var eq = [];
-  if(loc==='home') {
-    if(document.getElementById('cp-eq-dumbbells').checked) eq.push('dumbbells');
-    if(document.getElementById('cp-eq-pullup').checked) eq.push('pullup');
-    if(document.getElementById('cp-eq-bands').checked) eq.push('bands');
-  }
-  
-  var bestTpl = TEMPLATES.find(function(t) {
-     return t.location === loc && t.days === days;
-  });
-  if (!bestTpl) bestTpl = TEMPLATES[0];
-  
-  var newProg = JSON.parse(JSON.stringify(bestTpl));
-  newProg.instanceId = 'prog_' + Date.now();
-  userPrograms.push(newProg);
-  localStorage.setItem('userPrograms', JSON.stringify(userPrograms));
-  
-  hideModal('create-prog-modal');
-  openProgram(newProg.instanceId);
-}
-
 
 var curLibFilter = 'Все';
 function setLibFilter(f) {
@@ -1163,16 +621,13 @@ function forceUpdate() {
     window.location.reload();
   }
 }
-function goHome(){relWL();navTo('program-screen');}
+function goHome(){relWL();navTo('home');}
 function goMonth(){relWL();stopTimer();renderMonth(curMonth);showScreen('month-screen');}
 
 // ─────────────────────────────────────────
 // HOME
 // ─────────────────────────────────────────
-function renderProgram() {
-  document.getElementById('hs-title').innerText = P.name || P.meta.title || '';
-  document.getElementById('hs-subtitle').innerText = (P.days ? P.days + ' тренировки в неделю' : P.meta.subtitle || '');
-  
+function renderHome() {
   var html='';
   P.months.forEach(function(m){
     var pct=getProgress(m.id);
@@ -1228,7 +683,7 @@ function renderMonth(m) {
         prev+='<div class="ex-prev-item"><div class="ex-dot" style="background:'+m.color+'"></div><span>'+e.name+'</span></div>';
       });
       var more=w.exs.length-3;
-      var isFinished = ((P.instanceId === 'prog_default_1' ? localStorage.getItem('finished_'+w.id+'_w'+wk) : null) || localStorage.getItem('finished_'+P.instanceId+'_'+w.id+'_w'+wk)) === 'true';
+      var isFinished = localStorage.getItem('finished_'+w.id+'_w'+wk) === 'true';
       var btnText = isFinished ? '✓ Завершено' : (pct>0 ? '▶ Продолжить' : '▶ Начать');
       var btnStyle = isFinished ? 'background:var(--green)' : 'background:linear-gradient(135deg,'+m.color+','+m.dark+')';
 
@@ -1583,7 +1038,7 @@ function finishWorkout() {
   }
 
   document.getElementById('c-sub').textContent=curWorkout.label+' · Неделя '+curWeek;
-  localStorage.setItem('finished_'+P.instanceId+'_'+curWorkout.id+'_w'+curWeek, 'true');
+  localStorage.setItem('finished_'+curWorkout.id+'_w'+curWeek, 'true');
   saveHistory({wid:curWorkout.id+'_w'+curWeek,label:curWorkout.label+' (Неделя '+curWeek+')',month:curMonth.title,color:curMonth.color,date:new Date().toISOString(),done:done,total:total,mins:m,exs:doneExs,tonnage:curTonnage});
   var aiBtn = document.getElementById('c-ai-btn');
   if(aiBtn) aiBtn.style.display = localStorage.getItem('gemini_key') ? 'block' : 'none';
@@ -1743,7 +1198,7 @@ function saveName(v) {
   updateGreeting();
 }
 updateGreeting();
-renderProgram();
+renderHome();
 
 if(history.replaceState) history.replaceState({s: 'home'}, '');
 window.addEventListener('popstate', function(e) {
@@ -1753,7 +1208,7 @@ window.addEventListener('popstate', function(e) {
     var s = e.state.s;
     showScreen(s, true);
     document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
-    if(s==='home') { renderProgram(); document.getElementById('nav-home').classList.add('active'); }
+    if(s==='home') { renderHome(); document.getElementById('nav-home').classList.add('active'); }
     else if(s==='library') { renderLibrary(); document.getElementById('nav-lib').classList.add('active'); }
     else if(s==='history-screen') { renderHistory(); document.getElementById('nav-hist').classList.add('active'); }
     else if(s==='profile-screen') { document.getElementById('nav-prof').classList.add('active'); }
@@ -1881,167 +1336,4 @@ if ('serviceWorker' in navigator) {
 </body>
 </html>
   }
-,
-  {
-    id: "prog_gym_3d",
-    name: "Тренажерный зал (Фулбоди)",
-    days: 3,
-    location: "gym",
-    equipment: [],
-    focus: "hypertrophy",
-    desc: "Базовая программа для тренажерного зала, направленная на развитие всех мышечных групп за 3 дня в неделю.",
-    months: [
-      {
-        id: 'm1_gym',
-        title: 'Месяц 1',
-        subtitle: 'Вводный блок',
-        desc: 'Привыкаем к тренажерам и базовым движениям.',
-        weeks: '1–4',
-        color: '#ff3b30',
-        dark: '#990000',
-        workouts: [
-          {
-            id: 'm1_gym_w1', tag: 'День 1', label: 'Фулбоди А', sub: 'Базовые упражнения', warm: '5 мин кардио, суставная', cool: 'Растяжка',
-            exs: [
-              { id: 'gym1', name: 'Жим ногами в тренажере', sets: [{r:'12-15'},{r:'12-15'},{r:'12-15'}], note: 'Плавный темп' },
-              { id: 'gym2', name: 'Жим штанги лежа', sets: [{r:'10-12'},{r:'10-12'},{r:'10-12'}] },
-              { id: 'gym3', name: 'Тяга верхнего блока к груди', sets: [{r:'12'},{r:'12'},{r:'12'}] },
-              { id: 'gym4', name: 'Скручивания на наклонной скамье', sets: [{r:'15-20'},{r:'15-20'}], noW: true }
-            ]
-          },
-          {
-            id: 'm1_gym_w2', tag: 'День 2', label: 'Фулбоди Б', sub: 'Акцент на другие углы', warm: '5 мин кардио', cool: 'Растяжка',
-            exs: [
-              { id: 'gym5', name: 'Болгарские выпады', sets: [{r:'12'},{r:'12'},{r:'12'}] },
-              { id: 'gym6', name: 'Жим гантелей сидя', sets: [{r:'12'},{r:'12'},{r:'12'}] },
-              { id: 'gym7', name: 'Тяга горизонтального блока', sets: [{r:'12'},{r:'12'},{r:'12'}] },
-              { id: 'gym8', name: 'Гиперэкстензия', sets: [{r:'15'},{r:'15'},{r:'15'}], noW: true }
-            ]
-          },
-          {
-            id: 'm1_gym_w3', tag: 'День 3', label: 'Фулбоди В', sub: 'Изоляция', warm: '5 мин кардио', cool: 'Растяжка',
-            exs: [
-              { id: 'gym9', name: 'Разгибания ног в тренажере', sets: [{r:'15'},{r:'15'},{r:'15'}] },
-              { id: 'gym10', name: 'Сгибания ног', sets: [{r:'15'},{r:'15'},{r:'15'}] },
-              { id: 'gym11', name: 'Сведение рук в бабочке', sets: [{r:'15'},{r:'15'}] },
-              { id: 'gym12', name: 'Подъем штанги на бицепс', sets: [{r:'12-15'},{r:'12-15'}] },
-              { id: 'gym13', name: 'Разгибания на трицепс в кроссовере', sets: [{r:'12-15'},{r:'12-15'}] }
-            ]
-          }
-        ]
-      }
-    ]
-  },
-  {
-    id: "prog_home_4d",
-    name: "Домашний сплит Верх/Низ",
-    days: 4,
-    location: "home",
-    equipment: ["dumbbells"],
-    focus: "hypertrophy",
-    desc: "Продвинутая программа для дома. 4 тренировки в неделю с разделением на верх и низ тела.",
-    months: [
-      {
-        id: 'm1_home_4d',
-        title: 'Месяц 1',
-        subtitle: 'База Верх/Низ',
-        desc: 'Раздельные тренировки.',
-        weeks: '1–4',
-        color: '#0a84ff',
-        dark: '#004080',
-        workouts: [
-          {
-            id: 'h4_w1', tag: 'День 1', label: 'Низ', sub: 'Ноги и ягодицы', warm: 'Разминка', cool: 'Растяжка',
-            exs: [
-              { id: 'h4_1', name: 'Глубокие приседания с гантелей', sets: [{r:'12-15'},{r:'12-15'},{r:'12-15'},{r:'12-15'}] },
-              { id: 'h4_2', name: 'Румынская тяга с гантелями', sets: [{r:'12-15'},{r:'12-15'},{r:'12-15'}] },
-              { id: 'h4_3', name: 'Ягодичный мостик с весом', sets: [{r:'15'},{r:'15'},{r:'15'}] }
-            ]
-          },
-          {
-            id: 'h4_w2', tag: 'День 2', label: 'Верх', sub: 'Грудь, спина, руки', warm: 'Разминка', cool: 'Растяжка',
-            exs: [
-              { id: 'h4_4', name: 'Отжимания от пола', sets: [{r:'max'},{r:'max'},{r:'max'}], noW: true },
-              { id: 'h4_5', name: 'Тяга гантелей в наклоне', sets: [{r:'12'},{r:'12'},{r:'12'}] },
-              { id: 'h4_6', name: 'Махи гантелями в стороны', sets: [{r:'15'},{r:'15'},{r:'15'}] }
-            ]
-          },
-          {
-            id: 'h4_w3', tag: 'День 3', label: 'Низ', sub: 'Выпады и икры', warm: 'Разминка', cool: 'Растяжка',
-            exs: [
-              { id: 'h4_7', name: 'Выпады назад с гантелями', sets: [{r:'12'},{r:'12'},{r:'12'}] },
-              { id: 'h4_8', name: 'Подъемы на носки стоя', sets: [{r:'20'},{r:'20'},{r:'20'}] },
-              { id: 'h4_9', name: 'Скручивания', sets: [{r:'20'},{r:'20'},{r:'20'}], noW: true }
-            ]
-          },
-          {
-            id: 'h4_w4', tag: 'День 4', label: 'Верх', sub: 'Акцент на руки и плечи', warm: 'Разминка', cool: 'Растяжка',
-            exs: [
-              { id: 'h4_10', name: 'Армейский жим гантелей стоя', sets: [{r:'10-12'},{r:'10-12'},{r:'10-12'}] },
-              { id: 'h4_11', name: 'Отжимания от скамьи на трицепс', sets: [{r:'15'},{r:'15'},{r:'15'}], noW: true },
-              { id: 'h4_12', name: 'Попеременный подъем гантелей на бицепс', sets: [{r:'12'},{r:'12'},{r:'12'}] }
-            ]
-          }
-        ]
-      }
-    ]
-  }
 ];
-
-var userPrograms = [];
-try { userPrograms = JSON.parse(localStorage.getItem("userPrograms")) || []; } catch(e){}
-
-if (userPrograms.length === 0) {
-  var defaultProg = JSON.parse(JSON.stringify(TEMPLATES.find(function(t){return t.id === "prog_default";})));
-  defaultProg.instanceId = "prog_default_1";
-  userPrograms.push(defaultProg);
-  localStorage.setItem("userPrograms", JSON.stringify(userPrograms));
-}
-
-var activeProgId = localStorage.getItem("activeProgId");
-if (!activeProgId && userPrograms.length > 0) activeProgId = userPrograms[0].instanceId;
-
-var P = userPrograms.find(function(p){return p.instanceId === activeProgId;}) || userPrograms[0];
-
-<!-- CREATE PROGRAM MODAL -->
-<div id="create-prog-modal" class="modal">
-  <div class="modal-content" style="max-height:80vh;overflow-y:auto;">
-    <h3 style="margin-bottom:15px;font-weight:700">Новая программа</h3>
-    <div style="margin-bottom:15px">
-      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:5px;color:var(--text2)">Цель</label>
-      <select id="cp-focus" style="width:100%;padding:10px;border-radius:10px;background:var(--bg);color:var(--text);border:1px solid var(--border)">
-        <option value="hypertrophy">Набор массы / Рельеф</option>
-        <option value="strength">Сила</option>
-      </select>
-    </div>
-    <div style="margin-bottom:15px">
-      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:5px;color:var(--text2)">Локация</label>
-      <select id="cp-location" onchange="toggleCpEq()" style="width:100%;padding:10px;border-radius:10px;background:var(--bg);color:var(--text);border:1px solid var(--border)">
-        <option value="home">Дома</option>
-        <option value="gym">Тренажерный зал (всё доступно)</option>
-      </select>
-    </div>
-    <div id="cp-eq-wrap" style="display:block;margin-bottom:15px">
-      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:5px;color:var(--text2)">Инвентарь (Дома)</label>
-      <div style="display:flex;flex-direction:column;gap:8px">
-        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="cp-eq-dumbbells" checked> Гантели / Гири</label>
-        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="cp-eq-pullup" checked> Турник</label>
-        <label style="display:flex;align-items:center;gap:8px"><input type="checkbox" id="cp-eq-bands"> Фитнес-резинки</label>
-      </div>
-    </div>
-    <div style="margin-bottom:20px">
-      <label style="display:block;font-size:13px;font-weight:600;margin-bottom:5px;color:var(--text2)">Тренировок в неделю</label>
-      <select id="cp-days" style="width:100%;padding:10px;border-radius:10px;background:var(--bg);color:var(--text);border:1px solid var(--border)">
-        <option value="2">2 дня (Фулбоди)</option>
-        <option value="3" selected>3 дня (Фулбоди или Сплит)</option>
-        <option value="4">4 дня (Верх/Низ)</option>
-      </select>
-    </div>
-    <div style="display:flex;gap:10px">
-      <button class="btn" style="flex:1" onclick="generateProgram()">Создать</button>
-      <button class="btn btn-secondary" style="flex:1" onclick="hideModal('create-prog-modal')">Отмена</button>
-    </div>
-  </div>
-</div>
-
-
