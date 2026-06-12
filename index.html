@@ -1025,8 +1025,10 @@ function renderLibrary() {
   
   document.getElementById('lib-list').innerHTML = html;
   
-  var newFiltersWrap = document.getElementById('lib-filters');
-  if (newFiltersWrap) newFiltersWrap.scrollLeft = savedScroll;
+  setTimeout(function() {
+    var newFiltersWrap = document.getElementById('lib-filters');
+    if (newFiltersWrap) newFiltersWrap.scrollLeft = savedScroll;
+  }, 10);
 }
 
 function exportData() {
