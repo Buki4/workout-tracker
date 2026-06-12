@@ -1143,7 +1143,7 @@ function generateProgram() {
   userPrograms.push(newProg);
   localStorage.setItem('userPrograms', JSON.stringify(userPrograms));
   
-  hideModal('create-prog-modal');
+  document.getElementById('create-prog-modal').classList.remove('show');
   openProgram(newProg.instanceId);
 }
 
@@ -2002,8 +2002,8 @@ if ('serviceWorker' in navigator) {
 </script>
 
 <!-- CREATE PROGRAM MODAL -->
-<div id="create-prog-modal" class="modal">
-  <div class="modal-content" style="max-height:80vh;overflow-y:auto;">
+<div id="create-prog-modal" class="ai-modal">
+  <div class="ai-modal-content" style="background:var(--card);border-radius:var(--radius);border:1px solid var(--border);padding:24px;width:100%;max-width:420px;max-height:80vh;overflow-y:auto;">
     <h3 style="margin-bottom:15px;font-weight:700">Новая программа</h3>
     <div style="margin-bottom:15px">
       <label style="display:block;font-size:13px;font-weight:600;margin-bottom:5px;color:var(--text2)">Цель</label>
@@ -2037,7 +2037,7 @@ if ('serviceWorker' in navigator) {
     </div>
     <div style="display:flex;gap:10px">
       <button class="btn" style="flex:1" onclick="generateProgram()">Создать</button>
-      <button class="btn btn-secondary" style="flex:1" onclick="hideModal('create-prog-modal')">Отмена</button>
+      <button class="btn btn-secondary" style="flex:1" onclick="document.getElementById('create-prog-modal').classList.remove('show')">Отмена</button>
     </div>
   </div>
 </div>
