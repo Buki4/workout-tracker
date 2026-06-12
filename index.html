@@ -963,6 +963,9 @@ function getMuscleGroup(name) {
 }
 
 function renderLibrary() {
+  var filtersWrap = document.getElementById('lib-filters');
+  var savedScroll = filtersWrap ? filtersWrap.scrollLeft : 0;
+
   var exsMap = {};
   P.months.forEach(function(m){
     m.workouts.forEach(function(w){
@@ -979,7 +982,7 @@ function renderLibrary() {
   var uw = getWeights();
   
   var filters = ['Все', 'Грудь', 'Спина', 'Ноги', 'Плечи', 'Руки', 'Пресс', 'Кардио'];
-  var html = '<style>.no-scroll::-webkit-scrollbar{display:none}</style><div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;margin-top:-20px;margin-bottom:5px;" class="no-scroll">';
+  var html = '<style>.no-scroll::-webkit-scrollbar{display:none}</style><div id="lib-filters" style="display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;margin-top:-20px;margin-bottom:5px;" class="no-scroll">';
   filters.forEach(function(f){
     var active = curLibFilter === f;
     html += '<div onclick="setLibFilter(\''+f+'\')" style="padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;-webkit-tap-highlight-color:transparent;'+(active?'background:var(--accent);color:#fff;':'background:var(--card2);color:var(--text2);border:1px solid var(--border);')+'">'+f+'</div>';
@@ -1021,6 +1024,9 @@ function renderLibrary() {
   html += listHtml;
   
   document.getElementById('lib-list').innerHTML = html;
+  
+  var newFiltersWrap = document.getElementById('lib-filters');
+  if (newFiltersWrap) newFiltersWrap.scrollLeft = savedScroll;
 }
 
 function exportData() {
