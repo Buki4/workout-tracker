@@ -1,4 +1,4 @@
-const CACHE = "workout-tracker-0.4.1";
+const CACHE = "workout-tracker-0.4.2";
 const FILES = ['./', './style.css', './app.js'];
 
 self.addEventListener('install', e => {
@@ -17,12 +17,15 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   e.respondWith(
-    caches.match(e.request).then(r => r || fetch(e.request).then(res => {
-      if (res && res.status === 200) {
-        const clone = res.clone();
-        caches.open(CACHE).then(c => c.put(e.request, clone));
-      }
-      return res;
-    }).catch(() => caches.match('./')))
+    caches.match(e.request).then(cachedResponse => {
+      const fetchPromise = fetch(e.request).then(networkResponse => {
+        if (networkResponse && networkResponse.status === 200) {
+          caches.open(CACHE).then(cache => cache.put(e.request, networkResponse.clone()));
+        }
+        return networkResponse;
+      }).catch(() => null);
+      
+      return cachedResponse || fetchPromise || caches.match('./');
+    })
   );
 });
