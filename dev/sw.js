@@ -1,4 +1,4 @@
-const CACHE = 'workout-v0.1.9-202606121315';
+const CACHE = 'workout-v0.2.0-202606130653';
 const FILES = ['./'];
 
 self.addEventListener('install', e => {
