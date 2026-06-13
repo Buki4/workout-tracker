@@ -711,44 +711,76 @@ function generateProgram() {
   // --- Exercise Database ---
   var DB = {
     chest: [
-      {name:"Отжимания от пола", note:"Плавно, без рывков"},
-      {name:"Отжимания с широкой постановкой рук", note:"Акцент на грудь"},
-      {name:"Сведения рук перед собой", note:"С резинками или гантелями лежа"}
+      {name:"Отжимания от пола", eq:"bw", note:"Плавно, без рывков"},
+      {name:"Отжимания с широкой постановкой рук", eq:"bw", note:"Акцент на грудь"},
+      {name:"Жим штанги лежа", eq:"barbell", note:"Широким хватом"},
+      {name:"Жим гантелей лежа", eq:"dumbbells", note:"Глубоко опускаем гантели"},
+      {name:"Разводка гантелей", eq:"dumbbells", note:"Чувствуем растяжение"},
+      {name:"Отжимания на брусьях", eq:"dips", note:"С акцентом на грудь (наклон вперед)"},
+      {name:"Сведения рук с резиной", eq:"bands", note:"Изоляция на грудь"}
     ],
     back: [
-      {name:"Подтягивания", note:"Или тяга в наклоне, если турника нет"},
-      {name:"Тяга в наклоне", note:"Спина прямая, тянем к поясу"},
-      {name:"Пуловер", note:"Растягиваем широчайшие"}
+      {name:"Лодочка (Супермен)", eq:"bw", note:"Задержка в верхней точке"},
+      {name:"Подтягивания", eq:"pullup", note:"Широким хватом"},
+      {name:"Тяга штанги в наклоне", eq:"barbell", note:"Спина прямая, тянем к поясу"},
+      {name:"Тяга гантелей в наклоне", eq:"dumbbells", note:"Локти идут вдоль корпуса"},
+      {name:"Тяга резины к поясу", eq:"bands", note:"Сводим лопатки"},
+      {name:"Пуловер с гантелей", eq:"dumbbells", note:"Растягиваем широчайшие"}
     ],
     legs: [
-      {name:"Приседания", note:"Глубоко, колени по носкам"},
-      {name:"Выпады", note:"Шаг назад"},
-      {name:"Мертвая тяга", note:"Чувствуем бицепс бедра"},
-      {name:"Ягодичный мост", note:"Прожимаем ягодицы"},
-      {name:"Подъем на носки", note:"Пауза вверху"}
+      {name:"Приседания", eq:"bw", note:"Глубоко, колени по носкам"},
+      {name:"Выпады", eq:"bw", note:"Шаг назад"},
+      {name:"Ягодичный мост", eq:"bw", note:"Прожимаем ягодицы"},
+      {name:"Приседания со штангой", eq:"barbell", note:"Держим спину прямо"},
+      {name:"Румынская тяга", eq:"barbell", note:"На прямых ногах"},
+      {name:"Болгарские сплит-приседания", eq:"dumbbells", note:"Задняя нога на скамье/диване"},
+      {name:"Кубковые приседания", eq:"dumbbells", note:"Гантель перед грудью"},
+      {name:"Мертвая тяга с гантелями", eq:"dumbbells", note:"Чувствуем бицепс бедра"}
     ],
     shoulders: [
-      {name:"Жим вверх", note:"Без полного выпрямления локтей"},
-      {name:"Махи в стороны", note:"Мизинцы чуть выше больших пальцев"},
-      {name:"Махи в наклоне", note:"На заднюю дельту"}
+      {name:"Отжимания домиком (Pike push-ups)", eq:"bw", note:"Акцент на дельты"},
+      {name:"Армейский жим", eq:"barbell", note:"Жим штанги стоя"},
+      {name:"Тяга штанги к подбородку", eq:"barbell", note:"Широким хватом"},
+      {name:"Жим гантелей сидя", eq:"dumbbells", note:"Без полного выпрямления локтей"},
+      {name:"Махи гантелями в стороны", eq:"dumbbells", note:"Мизинцы чуть выше больших пальцев"},
+      {name:"Махи гантелями в наклоне", eq:"dumbbells", note:"На заднюю дельту"},
+      {name:"Махи с резиной в стороны", eq:"bands", note:"Держим натяжение"}
     ],
     arms: [
-      {name:"Сгибания рук на бицепс", note:"Без раскачки"},
-      {name:"Молотки", note:"Хват параллельный"},
-      {name:"Обратные отжимания", note:"Акцент на трицепс"},
-      {name:"Французский жим", note:"Локти зафиксированы"},
-      {name:"Разгибания рук", note:"С резинкой или из-за головы"}
+      {name:"Обратные отжимания", eq:"bw", note:"Акцент на трицепс (от дивана/стула)"},
+      {name:"Отжимания узким хватом", eq:"bw", note:"Локти вдоль корпуса"},
+      {name:"Подъем штанги на бицепс", eq:"barbell", note:"Без раскачки"},
+      {name:"Французский жим", eq:"barbell", note:"Локти зафиксированы"},
+      {name:"Сгибания рук с EZ-грифом", eq:"ez", note:"Комфортно для запястий"},
+      {name:"Сгибания рук на бицепс", eq:"dumbbells", note:"С супинацией"},
+      {name:"Молотки", eq:"dumbbells", note:"Хват параллельный"},
+      {name:"Разгибания рук с гантелью из-за головы", eq:"dumbbells", note:"На трицепс"}
     ],
     core: [
-      {name:"Скручивания", note:"Не тянем шею руками"},
-      {name:"Планка", note:"Держим поясницу ровно"},
-      {name:"Подъем ног", note:"Для пресса"}
+      {name:"Скручивания", eq:"bw", note:"Не тянем шею руками"},
+      {name:"Планка", eq:"bw", note:"Держим поясницу ровно"},
+      {name:"Велосипед", eq:"bw", note:"Тянем локоть к колену"},
+      {name:"Подъем ног", eq:"bw", note:"Для нижнего пресса"},
+      {name:"Скручивания с роликом/колесом", eq:"rope", note:"Если есть колесо/ролик"}
     ]
   };
 
-  // Helper to get random/rotated exercise
+  // Helper to get exercise filtered by equipment
   function getEx(group, idx) {
-    return Object.assign({}, DB[group][idx % DB[group].length]);
+    var validExs = [];
+    if (loc === 'home') {
+      validExs = DB[group].filter(function(ex) {
+        return ex.eq === 'bw' || eq.includes(ex.eq);
+      });
+    } else {
+      validExs = DB[group]; // in gym, assume all eq available
+    }
+
+    if (validExs.length === 0) {
+      // Fallback if absolutely no equipment matches (should rarely happen due to 'bw' fallbacks)
+      return {name: "Упражнение на " + group, note: "Собственный вес"};
+    }
+    return Object.assign({}, validExs[idx % validExs.length]);
   }
 
   // Generate Workouts based on Split
@@ -836,22 +868,13 @@ function generateProgram() {
     });
   }
 
-  // Handle Equipment Substitutions
-  if (loc === 'home') {
+  // Vest application if available
+  if (loc === 'home' && eq.includes('vest')) {
     months.forEach(function(m) {
       m.workouts.forEach(function(w) {
         w.exs.forEach(function(ex) {
-          if (eq.includes('vest') && (ex.name.toLowerCase().includes('отжимания') || ex.name.toLowerCase().includes('подтягивания') || ex.name.toLowerCase().includes('приседания'))) {
-            ex.note = (ex.note ? ex.note + '. ' : '') + 'Можно использовать жилет.';
-          }
-          if (eq.includes('dips') && ex.name.toLowerCase().includes('отжимания от пола')) { ex.name = 'Отжимания на брусьях'; }
-          if (eq.includes('bench') && eq.includes('barbell') && ex.name.toLowerCase().includes('отжимания от пола')) { ex.name = 'Жим штанги лежа'; }
-          if (eq.includes('barbell') && ex.name.toLowerCase().includes('приседания')) { ex.name = 'Приседания со штангой'; }
-          if (eq.includes('ez') && ex.name.toLowerCase().includes('сгибания рук')) { ex.name = 'Сгибания рук с EZ-грифом'; }
-          // If no pullup, substitute Pullups with Dumbbell Rows
-          if (!eq.includes('pullup') && ex.name.toLowerCase().includes('подтягивания')) {
-             ex.name = 'Тяга гантелей в наклоне';
-             ex.note = 'Альтернатива подтягиваниям';
+          if (ex.eq === 'bw') {
+            ex.note = (ex.note ? ex.note + '. ' : '') + 'Можно надеть жилет-утяжелитель.';
           }
         });
       });
@@ -879,7 +902,6 @@ function generateProgram() {
     openProgram(newProg.instanceId);
   }, 100);
 }
-
 
 var curLibFilter = 'Все';
 function setLibFilter(f) {
