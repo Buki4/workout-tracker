@@ -1,5 +1,5 @@
-const CACHE = 'workout-v0.1.4-202606121145';
-const FILES = ['./'];
+const CACHE = 'workout-tracker-0.4.0';
+const FILES = ['./', './style.css', './app.js'];
 
 self.addEventListener('install', e => {
   e.waitUntil(

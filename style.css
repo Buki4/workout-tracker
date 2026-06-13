@@ -200,3 +200,10 @@ body{min-height:100dvh;overscroll-behavior:none;-webkit-tap-highlight-color:tran
 .ai-modal.show{display:flex;opacity:1}
 
 .sp{height:14px}
+
+.btn { padding: 14px 20px; border-radius: var(--radius); font-size: 16px; font-weight: 700; cursor: pointer; transition: transform 0.15s, opacity 0.15s, box-shadow 0.15s; -webkit-tap-highlight-color: transparent; }
+.btn:active { transform: scale(0.96); opacity: 0.9; }
+
+.ai-btn-close { padding: 14px 20px; border-radius: var(--radius); font-size: 16px; font-weight: 700; background: var(--card2); color: var(--text); border: 1px solid var(--border); cursor: pointer; transition: transform 0.15s, opacity 0.15s; -webkit-tap-highlight-color: transparent; display:flex; align-items:center; justify-content:center; }
+.ai-btn-close:active { transform: scale(0.96); opacity: 0.9; }
+
