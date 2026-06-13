@@ -1,64 +1,3 @@
-// ─────────────────────────────────────────
-// STATE MANAGEMENT & STORAGE
-// ─────────────────────────────────────────
-const Storage = {
-  get: function(key, def) {
-    try {
-      var val = localStorage.getItem(key);
-      if (!val) return def;
-      var parsed = JSON.parse(val);
-      if (Array.isArray(def) && !Array.isArray(parsed)) return def;
-      return parsed;
-    } catch(e) {
-      console.warn("Storage warning for", key);
-      return def;
-    }
-  },
-  set: function(key, val) {
-    try {
-      if (typeof val === "string") localStorage.setItem(key, val);
-      else localStorage.setItem(key, JSON.stringify(val));
-    } catch(e){}
-  },
-  remove: function(key) {
-    try { localStorage.removeItem(key); } catch(e){}
-  }
-};
-
-const AppState = {
-  programs: Storage.get("userPrograms", []),
-  activeId: localStorage.getItem("activeProgId") || null,
-  get currentProgram() {
-    if (!this.programs || this.programs.length === 0) return null;
-    return this.programs.find(function(p){return p.instanceId === AppState.activeId;}) || this.programs[0];
-  },
-  session: {
-    month: null,
-    week: null,
-    workout: null,
-    state: {}
-  },
-  libFilter: "Все",
-  
-  savePrograms: function() {
-    Storage.set("userPrograms", this.programs);
-  },
-  setActiveId: function(id) {
-    this.activeId = id;
-    localStorage.setItem("activeProgId", id);
-  }
-};
-
-// Aliases for compatibility during transition
-var userPrograms = AppState.programs;
-Object.defineProperty(window, "P", { get: function() { return AppState.currentProgram; } });
-Object.defineProperty(window, "curMonth", { get: function() { return AppState.session.month; }, set: function(v) { AppState.session.month = v; } });
-Object.defineProperty(window, "curWeek", { get: function() { return AppState.session.week; }, set: function(v) { AppState.session.week = v; } });
-Object.defineProperty(window, "curWorkout", { get: function() { return AppState.session.workout; }, set: function(v) { AppState.session.workout = v; } });
-Object.defineProperty(window, "wState", { get: function() { return AppState.session.state; }, set: function(v) { AppState.session.state = v; } });
-Object.defineProperty(window, "curLibFilter", { get: function() { return AppState.libFilter; }, set: function(v) { AppState.libFilter = v; } });
-
-
 
 // ─────────────────────────────────────────
 // PROGRAM DATA
@@ -475,6 +414,307 @@ var DB = {
   };
 
 
+var userPrograms = [];
+try { userPrograms = JSON.parse(localStorage.getItem("userPrograms")) || []; } catch(e){}
+
+if (userPrograms.length === 0) {
+  var defaultProg = JSON.parse(JSON.stringify(TEMPLATES.find(function(t){return t.id === "prog_default";})));
+  defaultProg.instanceId = "prog_default_1";
+  userPrograms.push(defaultProg);
+  localStorage.setItem("userPrograms", JSON.stringify(userPrograms));
+}
+
+var activeProgId = localStorage.getItem("activeProgId");
+if (!activeProgId && userPrograms.length > 0) activeProgId = userPrograms[0].instanceId;
+
+var P = userPrograms.find(function(p){return p.instanceId === activeProgId;}) || userPrograms[0];
+
+
+// ─────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────
+var curMonth = null, curWorkout = null, curWeek = null, wState = {};
+var tInterval = null, tSecs = 0, tRunning = false;
+var wakeLock = null;
+async function reqWL() { if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {} } }
+function relWL() { if (wakeLock !== null) { wakeLock.release().then(function(){wakeLock=null;}); } }
+document.addEventListener('visibilitychange', function(){
+  if(wakeLock!==null && document.visibilityState==='visible') reqWL();
+});
+document.addEventListener('touchstart', function(e){
+  var t = e.target.tagName;
+  if(t !== 'INPUT' && t !== 'TEXTAREA' && t !== 'BUTTON' && !e.target.closest('.chk-wrap') && !e.target.closest('.diff-wrap')) {
+    if(document.activeElement && (document.activeElement.tagName==='INPUT' || document.activeElement.tagName==='TEXTAREA')) {
+      document.activeElement.blur();
+    }
+  }
+});
+var audioCtx = null;
+function playSound(type) {
+  if (!audioCtx) {
+    var AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return;
+    audioCtx = new AC();
+  }
+  if (audioCtx.state === 'suspended') audioCtx.resume();
+  if (type === 'init') return;
+  var t = audioCtx.currentTime;
+  var osc = audioCtx.createOscillator();
+  var gain = audioCtx.createGain();
+  osc.connect(gain);
+  gain.connect(audioCtx.destination);
+  if (type === 'ding') {
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, t);
+    osc.frequency.exponentialRampToValueAtTime(440, t + 0.5);
+    gain.gain.setValueAtTime(0, t);
+    gain.gain.linearRampToValueAtTime(0.3, t + 0.02);
+    gain.gain.exponentialRampToValueAtTime(0.001, t + 1);
+    osc.start(t);
+    osc.stop(t + 1);
+  } else if (type === 'tada') {
+    var freqs = [523.25, 659.25, 783.99, 1046.50];
+    freqs.forEach(function(f, i) {
+      var o = audioCtx.createOscillator();
+      var g = audioCtx.createGain();
+      o.connect(g);
+      g.connect(audioCtx.destination);
+      o.type = 'triangle';
+      var startT = t + i*0.1;
+      o.frequency.setValueAtTime(f, startT);
+      g.gain.setValueAtTime(0, startT);
+      g.gain.linearRampToValueAtTime(0.15, startT + 0.05);
+      g.gain.exponentialRampToValueAtTime(0.001, startT + 1.5);
+      o.start(startT);
+      o.stop(startT + 1.5);
+    });
+  }
+}
+var restInt=null, restSecs=0;
+function adjRest(s) {
+  if(restSecs > 0) {
+    restSecs += s;
+    if(restSecs < 0) restSecs = 0;
+    updRest();
+  }
+}
+function startRest(diff) {
+  stopRest();
+  restSecs = diff === 'down' ? 120 : (diff === 'up' ? 60 : 90);
+  var rb=document.getElementById('rest-badge');
+  if(!rb) return;
+  rb.style.display='flex';
+  rb.classList.remove('done');
+  updRest();
+  restInt = setInterval(function(){
+    restSecs--;
+    if(restSecs<=0) {
+      stopRest();
+      rb.style.display='flex';
+      rb.classList.add('done');
+      document.getElementById('rest-val').textContent = 'Пора!';
+      if('vibrate' in navigator) navigator.vibrate([200,100,200]);
+      playSound('ding');
+    } else { updRest(); }
+  }, 1000);
+}
+function stopRest() {
+  if(restInt) clearInterval(restInt);
+  restInt=null;
+  var rb=document.getElementById('rest-badge');
+  if(rb) { rb.style.display='none'; rb.classList.remove('done'); }
+}
+
+var activeSetTimer = null;
+function toggleSetTimer(k, minS, maxS, origTxt, exId, si) {
+  var el = document.getElementById('rp_'+k);
+  var txtEl = document.getElementById('rtxt_'+k);
+  if(!el || !txtEl) return;
+  
+  if(activeSetTimer && activeSetTimer.k === k) {
+    clearInterval(activeSetTimer.intId);
+    el.classList.remove('active-timer');
+    txtEl.textContent = origTxt;
+    activeSetTimer = null;
+    return;
+  }
+  if(activeSetTimer) {
+    clearInterval(activeSetTimer.intId);
+    var oldEl = document.getElementById('rp_'+activeSetTimer.k);
+    var oldTxt = document.getElementById('rtxt_'+activeSetTimer.k);
+    if(oldEl) oldEl.classList.remove('active-timer');
+    if(oldTxt) oldTxt.textContent = activeSetTimer.orig;
+  }
+  
+  playSound('init');
+  el.classList.add('active-timer');
+  var secs = 0;
+  txtEl.textContent = '⏱ 0 / '+maxS+'с';
+  
+  var intId = setInterval(function() {
+    secs++;
+    txtEl.textContent = '⏱ '+secs+' / '+maxS+'с';
+    if(secs === minS && minS !== maxS) {
+      playSound('ding');
+      if('vibrate' in navigator) navigator.vibrate(200);
+    }
+    if(secs >= maxS) {
+      clearInterval(intId);
+      activeSetTimer = null;
+      el.classList.remove('active-timer');
+      txtEl.textContent = origTxt;
+      playSound('tada');
+      if('vibrate' in navigator) navigator.vibrate([200,100,200]);
+      if(!wState[k] || !wState[k].done) togD(exId, si, 'ok');
+    }
+  }, 1000);
+  
+  activeSetTimer = { k: k, intId: intId, orig: origTxt };
+}
+function updRest() {
+  var m=Math.floor(restSecs/60), s=restSecs%60;
+  var rv=document.getElementById('rest-val');
+  if(rv) rv.textContent = m+':'+(s<10?'0':'')+s;
+}
+function onNotesInput(v) {
+  wState.notes = v;
+  saveWS();
+}
+
+// ─────────────────────────────────────────
+// STORAGE
+// ─────────────────────────────────────────
+function getWsKey(id) {
+  if (P.instanceId === 'prog_default_1') return 'ws_' + id;
+  return 'ws_' + P.instanceId + '_' + id;
+}
+
+function saveWS() {
+  if (!curWorkout || !curWeek) return;
+  try { localStorage.setItem(getWsKey(curWorkout.id+'_w'+curWeek), JSON.stringify(wState)); } catch(e){}
+}
+function loadWS(id) {
+  try { var r=localStorage.getItem(getWsKey(id)); return r?JSON.parse(r):{}; } catch(e){ return {}; }
+}
+function getWeights() {
+  try { var r=localStorage.getItem('uw'); return r?JSON.parse(r):{}; } catch(e){ return {}; }
+}
+function saveUW(exName, si, weight, diff, reps) {
+  try {
+    var w=getWeights();
+    var arr = w[exName];
+    if (!Array.isArray(arr)) {
+       var oldW = '';
+       if (typeof arr === 'string') oldW = arr;
+       else if (arr && typeof arr === 'object') oldW = arr.w;
+       arr = [];
+       if (oldW) arr[0] = { w: oldW, d: '', r: '' };
+    }
+    var obj = arr[si] || { w: '', d: '', r: '' };
+    if (weight !== undefined) obj.w = weight;
+    if (diff !== undefined) obj.d = diff;
+    if (reps !== undefined) obj.r = reps;
+    arr[si] = obj;
+    w[exName] = arr;
+    localStorage.setItem('uw', JSON.stringify(w));
+  } catch(e){}
+}
+function getHistory() {
+  try { var r=localStorage.getItem('wh'); return r?JSON.parse(r):[]; } catch(e){ return []; }
+}
+function saveHistory(e) {
+  try {
+    var h=getHistory(); h.unshift(e);
+    localStorage.setItem('wh', JSON.stringify(h.slice(0,100)));
+  } catch(ex){}
+}
+function getProgress(monthId) {
+  var m=P.months.find(function(x){return x.id===monthId;});
+  if(!m) return 0;
+  var weeksArr=m.weeks.split('–');
+  var startW=parseInt(weeksArr[0])||1, endW=parseInt(weeksArr[1])||4;
+  var total=0, done=0;
+  for(var wk=startW; wk<=endW; wk++){
+    m.workouts.forEach(function(w){
+      var s=loadWS(w.id+'_w'+wk);
+      w.exs.forEach(function(ex){
+        ex.sets.forEach(function(set,si){
+          total++;
+          var k=ex.id+'_'+si;
+          if(s[k] && s[k].done) done++;
+        });
+      });
+    });
+  }
+  return total===0?0:Math.round(done/total*100);
+}
+
+// ─────────────────────────────────────────
+// NAVIGATION
+// ─────────────────────────────────────────
+function showScreen(id, fromPop) {
+  document.querySelectorAll('.screen').forEach(function(s){s.classList.remove('active');});
+  var el=document.getElementById(id);
+  if(el) {
+    el.classList.add('active','slide-in');
+    setTimeout(function(){el.classList.remove('slide-in');},300);
+  }
+  document.getElementById('bnav').style.display=id==='workout-screen'?'none':'flex';
+  if(!fromPop && history.pushState) {
+    history.pushState({s: id}, '');
+  }
+}
+function navTo(tab) {
+  document.querySelectorAll('.nav-item').forEach(function(n){n.classList.remove('active');});
+  if(tab==='home-screen' || tab==='home'){
+    renderProgramsList();
+    showScreen('home-screen');
+    document.getElementById('nav-home').classList.add('active');
+  }
+  else if(tab==='program-screen'){
+    renderProgram();
+    showScreen('program-screen');
+    document.getElementById('nav-home').classList.add('active');
+  }
+  else if(tab==='library'){renderLibrary();showScreen('library-screen');document.getElementById('nav-lib').classList.add('active');}
+  else if(tab==='history'){renderHistory();showScreen('history-screen');document.getElementById('nav-hist').classList.add('active');}
+  else if(tab==='profile'){showScreen('profile-screen');document.getElementById('nav-prof').classList.add('active');}
+}
+
+function getProgramProgress(p) {
+  var tot=0, don=0;
+  p.months.forEach(function(m){
+    m.workouts.forEach(function(w){
+      var wks=m.weeks.split("–");
+      var st=parseInt(wks[0]), en=wks.length>1?parseInt(wks[1]):st;
+      for(var wk=st;wk<=en;wk++) {
+        tot++;
+        var isDon = false;
+        if (p.instanceId === "prog_default_1") {
+          isDon = localStorage.getItem("finished_"+w.id+"_w"+wk) === "true";
+        } else {
+          isDon = localStorage.getItem("finished_"+p.instanceId+"_"+w.id+"_w"+wk) === "true";
+        }
+        if (isDon) don++;
+      }
+    });
+  });
+  return tot>0 ? Math.round((don/tot)*100) : 0;
+}
+
+function deleteProgram(e, id) {
+  e.stopPropagation();
+  if(!confirm("Удалить программу? История тренировок останется.")) return;
+  userPrograms = userPrograms.filter(function(p){return p.instanceId !== id;});
+  localStorage.setItem("userPrograms", JSON.stringify(userPrograms));
+  if(activeProgId === id) {
+    if(userPrograms.length > 0) activeProgId = userPrograms[0].instanceId;
+    else activeProgId = null;
+    localStorage.setItem("activeProgId", activeProgId);
+  }
+  renderProgramsList();
+}
+
 function renderProgramsList() {
   var html = '<button class="btn" style="width:100%;margin-bottom:15px;background:var(--accent);color:#fff;border:none;box-shadow:0 4px 15px rgba(108,99,255,0.3);" onclick="document.getElementById(\'create-prog-modal\').classList.add(\'show\')">✨ Создать программу</button>';
   
@@ -665,6 +905,7 @@ function generateProgram() {
   }, 100);
 }
 
+var curLibFilter = 'Все';
 function setLibFilter(f) {
   curLibFilter = f;
   renderLibrary();
