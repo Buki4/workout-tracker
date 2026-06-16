@@ -1005,7 +1005,7 @@ function renderLibrary() {
     }
   });
 
-  var html = '';
+  var html = '<button class="btn btn-primary" style="margin-bottom:15px;width:100%" onclick="openAddExModal()">+ Свое упражнение</button>';
   var uw = getWeights();
   var visibleCount = 0;
   
@@ -1051,7 +1051,7 @@ function renderLibrary() {
     });
   });
 
-  if (!html) html = '<div style="text-align:center;color:var(--text-sec);padding:20px;font-size:14px">Упражнений не найдено</div>';
+  if (visibleCount === 0) html += '<div style="text-align:center;color:var(--text-sec);padding:20px;font-size:14px">Упражнений не найдено</div>';
   itemsWrap.innerHTML = '<div style="color:var(--text3);font-size:12px;margin-bottom:-10px">Отображено упражнений: '+visibleCount+'</div>' + html;
 }
 
