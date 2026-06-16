@@ -415,8 +415,7 @@ var DB = {
 
 
 // --- Custom DB Logic ---
-var customDB = {chest:[], back:[], legs:[], shoulders:[], arms:[], core:[]};
-try { var saved = JSON.parse(localStorage.getItem('customDB')); if (saved) customDB = saved; } catch(e){}
+const customDB = Storage.get('customDB', {chest:[], back:[], legs:[], shoulders:[], arms:[], core:[]});
 Object.keys(customDB).forEach(function(mg) {
   if (DB[mg]) {
     DB[mg] = DB[mg].concat(customDB[mg]);
@@ -444,7 +443,7 @@ function saveAddEx() {
   
   if (!customDB[mg]) customDB[mg] = [];
   customDB[mg].push(newEx);
-  try { localStorage.setItem('customDB', JSON.stringify(customDB)); } catch(e){}
+  Storage.set('customDB', customDB);
   
   if (DB[mg]) DB[mg].push(newEx);
   
@@ -455,9 +454,6 @@ function saveAddEx() {
     renderLibrary();
   }
 }
-
-
-
 
 var userPrograms = [];
 try { userPrograms = JSON.parse(localStorage.getItem("userPrograms")) || []; } catch(e){}
@@ -940,6 +936,48 @@ function generateProgram() {
     months: months
   };
 
+
+// --- Custom DB Logic ---
+var customDB = {chest:[], back:[], legs:[], shoulders:[], arms:[], core:[]};
+try { var saved = JSON.parse(localStorage.getItem('customDB')); if (saved) customDB = saved; } catch(e){}
+Object.keys(customDB).forEach(function(mg) {
+  if (DB[mg]) {
+    DB[mg] = DB[mg].concat(customDB[mg]);
+  }
+});
+
+function openAddExModal() {
+  document.getElementById('add-ex-name').value = '';
+  document.getElementById('add-ex-note').value = '';
+  document.getElementById('add-ex-modal').classList.add('show');
+}
+
+function saveAddEx() {
+  var name = document.getElementById('add-ex-name').value.trim();
+  var mg = document.getElementById('add-ex-mg').value;
+  var eq = document.getElementById('add-ex-eq').value;
+  var note = document.getElementById('add-ex-note').value.trim();
+
+  if (!name) {
+    showToast('Введите название!');
+    return;
+  }
+
+  var newEx = { name: name, eq: eq, note: note };
+  
+  if (!customDB[mg]) customDB[mg] = [];
+  customDB[mg].push(newEx);
+  try { localStorage.setItem('customDB', JSON.stringify(customDB)); } catch(e){}
+  
+  if (DB[mg]) DB[mg].push(newEx);
+  
+  document.getElementById('add-ex-modal').classList.remove('show');
+  showToast('Упражнение добавлено!');
+  
+  if (document.getElementById('library-screen').classList.contains('active')) {
+    renderLibrary();
+  }
+}
   userPrograms.push(newProg);
   localStorage.setItem('userPrograms', JSON.stringify(userPrograms));
   
