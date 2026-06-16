@@ -938,7 +938,8 @@ function generateProgram() {
 
 
 // --- Custom DB Logic ---
-const customDB = Storage.get('customDB', {chest:[], back:[], legs:[], shoulders:[], arms:[], core:[]});
+var customDB = {chest:[], back:[], legs:[], shoulders:[], arms:[], core:[]};
+try { var saved = JSON.parse(localStorage.getItem('customDB')); if (saved) customDB = saved; } catch(e){}
 Object.keys(customDB).forEach(function(mg) {
   if (DB[mg]) {
     DB[mg] = DB[mg].concat(customDB[mg]);
@@ -966,7 +967,7 @@ function saveAddEx() {
   
   if (!customDB[mg]) customDB[mg] = [];
   customDB[mg].push(newEx);
-  Storage.set('customDB', customDB);
+  try { localStorage.setItem('customDB', JSON.stringify(customDB)); } catch(e){}
   
   if (DB[mg]) DB[mg].push(newEx);
   
