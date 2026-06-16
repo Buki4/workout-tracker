@@ -414,6 +414,47 @@ var DB = {
   };
 
 
+// --- Custom DB Logic ---
+const customDB = Storage.get('customDB', {chest:[], back:[], legs:[], shoulders:[], arms:[], core:[]});
+Object.keys(customDB).forEach(function(mg) {
+  if (DB[mg]) {
+    DB[mg] = DB[mg].concat(customDB[mg]);
+  }
+});
+
+function openAddExModal() {
+  document.getElementById('add-ex-name').value = '';
+  document.getElementById('add-ex-note').value = '';
+  document.getElementById('add-ex-modal').classList.add('show');
+}
+
+function saveAddEx() {
+  var name = document.getElementById('add-ex-name').value.trim();
+  var mg = document.getElementById('add-ex-mg').value;
+  var eq = document.getElementById('add-ex-eq').value;
+  var note = document.getElementById('add-ex-note').value.trim();
+
+  if (!name) {
+    showToast('Введите название!');
+    return;
+  }
+
+  var newEx = { name: name, eq: eq, note: note };
+  
+  if (!customDB[mg]) customDB[mg] = [];
+  customDB[mg].push(newEx);
+  Storage.set('customDB', customDB);
+  
+  if (DB[mg]) DB[mg].push(newEx);
+  
+  document.getElementById('add-ex-modal').classList.remove('show');
+  showToast('Упражнение добавлено!');
+  
+  if (document.getElementById('library-screen').classList.contains('active')) {
+    renderLibrary();
+  }
+}
+
 var userPrograms = [];
 try { userPrograms = JSON.parse(localStorage.getItem("userPrograms")) || []; } catch(e){}
 
@@ -895,6 +936,47 @@ function generateProgram() {
     months: months
   };
 
+
+// --- Custom DB Logic ---
+const customDB = Storage.get('customDB', {chest:[], back:[], legs:[], shoulders:[], arms:[], core:[]});
+Object.keys(customDB).forEach(function(mg) {
+  if (DB[mg]) {
+    DB[mg] = DB[mg].concat(customDB[mg]);
+  }
+});
+
+function openAddExModal() {
+  document.getElementById('add-ex-name').value = '';
+  document.getElementById('add-ex-note').value = '';
+  document.getElementById('add-ex-modal').classList.add('show');
+}
+
+function saveAddEx() {
+  var name = document.getElementById('add-ex-name').value.trim();
+  var mg = document.getElementById('add-ex-mg').value;
+  var eq = document.getElementById('add-ex-eq').value;
+  var note = document.getElementById('add-ex-note').value.trim();
+
+  if (!name) {
+    showToast('Введите название!');
+    return;
+  }
+
+  var newEx = { name: name, eq: eq, note: note };
+  
+  if (!customDB[mg]) customDB[mg] = [];
+  customDB[mg].push(newEx);
+  Storage.set('customDB', customDB);
+  
+  if (DB[mg]) DB[mg].push(newEx);
+  
+  document.getElementById('add-ex-modal').classList.remove('show');
+  showToast('Упражнение добавлено!');
+  
+  if (document.getElementById('library-screen').classList.contains('active')) {
+    renderLibrary();
+  }
+}
   userPrograms.push(newProg);
   localStorage.setItem('userPrograms', JSON.stringify(userPrograms));
   
@@ -924,21 +1006,6 @@ function getMuscleGroup(name) {
 }
 
 function renderLibrary() {
-  var exsMap = {};
-  P.months.forEach(function(m){
-    m.workouts.forEach(function(w){
-      w.exs.forEach(function(ex){
-        if (!exsMap[ex.name]) {
-          exsMap[ex.name] = { count: 0, note: ex.note, mg: getMuscleGroup(ex.name) };
-        }
-        exsMap[ex.name].count++;
-      });
-    });
-  });
-  
-  var sortedExs = Object.keys(exsMap).sort();
-  var uw = getWeights();
-  
   var libList = document.getElementById('lib-list');
   var filtersWrap = document.getElementById('lib-filters-container');
   var itemsWrap = document.getElementById('lib-items-container');
@@ -949,7 +1016,10 @@ function renderLibrary() {
     itemsWrap = document.getElementById('lib-items-container');
   }
   
-  var filters = ['Все', 'Грудь', 'Спина', 'Ноги', 'Плечи', 'Руки', 'Пресс', 'Кардио'];
+  var mgNames = { 'chest': 'Грудь', 'back': 'Спина', 'legs': 'Ноги', 'shoulders': 'Плечи', 'arms': 'Руки', 'core': 'Пресс' };
+  var eqNames = { 'bw': 'Свой вес', 'barbell': 'Штанга', 'dumbbells': 'Гантели', 'pullup': 'Турник', 'dips': 'Брусья', 'bands': 'Резинки', 'rope': 'Канат', 'bench': 'Скамья', 'vest': 'Жилет', 'ez': 'EZ-гриф' };
+  
+  var filters = ['Все'].concat(Object.values(mgNames));
   if (!filtersWrap.children.length) {
     var filtersHtml = '';
     filters.forEach(function(f){
@@ -972,38 +1042,54 @@ function renderLibrary() {
     }
   });
 
+  var html = '';
+  var uw = getWeights();
   var visibleCount = 0;
-  var listHtml = '';
   
-  sortedExs.forEach(function(name) {
-    var ex = exsMap[name];
-    if (curLibFilter !== 'Все' && ex.mg !== curLibFilter) return;
-    visibleCount++;
+  Object.keys(DB).forEach(function(mgKey) {
+    var mgTitle = mgNames[mgKey];
+    if (curLibFilter !== 'Все' && mgTitle !== curLibFilter) return;
     
-    var globalStats = uw[name];
-    var statText = 'Нет данных о тренировках';
+    html += '<div style="font-size:16px;font-weight:700;color:var(--text);margin-top:10px;margin-bottom:5px;">' + mgTitle + '</div>';
     
-    if (globalStats && globalStats.length > 0) {
-      var lastSet = null;
-      for(var i=globalStats.length-1; i>=0; i--) {
-        if(globalStats[i] && (globalStats[i].w || globalStats[i].r)) { lastSet = globalStats[i]; break; }
-      }
-      if (!lastSet && globalStats[0]) lastSet = globalStats[0];
+    DB[mgKey].forEach(function(ex) {
+      visibleCount++;
+      var globalStats = uw[ex.name];
+      var statText = 'Нет данных о тренировках';
       
-      if (lastSet && (lastSet.w || lastSet.r)) {
-         statText = 'Последний результат: ' + (lastSet.w ? lastSet.w + ' кг' : '') + (lastSet.w && lastSet.r ? ' × ' : '') + (lastSet.r ? lastSet.r + ' повт' : '');
+      if (globalStats && globalStats.length > 0) {
+        var lastSet = null;
+        for(var i=globalStats.length-1; i>=0; i--) {
+          if(globalStats[i] && (globalStats[i].w || globalStats[i].r)) { lastSet = globalStats[i]; break; }
+        }
+        if (!lastSet && globalStats[0]) lastSet = globalStats[0];
+        
+        if (lastSet && (lastSet.w || lastSet.r)) {
+           statText = 'PR: ' + (lastSet.w ? lastSet.w + ' кг' : '') + (lastSet.w && lastSet.r ? ' × ' : '') + (lastSet.r ? lastSet.r + ' повт' : '');
+        }
       }
-    }
-    
-    listHtml += '<div style="background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:15px">' +
-      '<div style="font-weight:700;font-size:16px;margin-bottom:4px">'+name+'</div>' +
-      '<div style="font-size:11px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.05em;margin-bottom:8px">'+ex.mg+'</div>' +
-      (ex.note ? '<div style="font-size:13px;color:var(--text2);margin-bottom:8px">💡 '+ex.note+'</div>' : '') +
-      '<div style="font-size:13px;color:var(--accent);font-weight:600">'+statText+'</div>' +
-    '</div>';
+      
+      var eqText = eqNames[ex.eq] || ex.eq || '';
+      var noteText = ex.note ? '<div style="font-size:12px;color:var(--text-sec);margin-top:4px;">' + ex.note + '</div>' : '';
+      var eqBadge = eqText ? '<span style="font-size:10px;background:var(--bg);padding:2px 6px;border-radius:4px;color:var(--text-sec);margin-left:8px;vertical-align:middle">' + eqText + '</span>' : '';
+      
+      var isCustom = false;
+      if (customDB[mgKey]) {
+          isCustom = customDB[mgKey].some(function(cEx) { return cEx.name === ex.name; });
+      }
+      var customBadge = isCustom ? '<span style="font-size:10px;background:rgba(255,165,0,0.2);color:orange;padding:2px 6px;border-radius:4px;margin-left:4px;vertical-align:middle">Своё</span>' : '';
+      
+      html += '<div style="background:var(--card);border-radius:var(--radius-sm);border:1px solid var(--border);padding:15px;margin-bottom:10px;">';
+      html += '<div style="display:flex;justify-content:space-between;align-items:flex-start">';
+      html += '<div style="flex:1"><div><span style="font-weight:600;font-size:15px;">' + ex.name + '</span>' + eqBadge + customBadge + '</div>' + noteText + '</div>';
+      html += '</div>';
+      html += '<div style="font-size:13px;color:var(--accent);font-weight:600;margin-top:8px">'+statText+'</div>';
+      html += '</div>';
+    });
   });
-  
-  itemsWrap.innerHTML = '<div style="color:var(--text3);font-size:12px;margin-bottom:-10px">Отображено упражнений: '+visibleCount+'</div>' + listHtml;
+
+  if (!html) html = '<div style="text-align:center;color:var(--text-sec);padding:20px;font-size:14px">Упражнений не найдено</div>';
+  itemsWrap.innerHTML = '<div style="color:var(--text3);font-size:12px;margin-bottom:-10px">Отображено упражнений: '+visibleCount+'</div>' + html;
 }
 
 function exportData() {
