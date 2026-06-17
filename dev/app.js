@@ -1860,3 +1860,100 @@ if ('serviceWorker' in navigator) {
     }).catch(function(){});
   });
 }
+
+// ─────────────────────────────────────────
+// REPLACE EXERCISE FEATURE
+// ─────────────────────────────────────────
+var replaceExIndex = null;
+var curReplaceFilter = 'Все';
+
+function openReplaceModal(ei) {
+  replaceExIndex = ei;
+  curReplaceFilter = 'Все';
+  document.getElementById('replace-ex-modal').classList.add('show');
+  renderReplaceList();
+}
+
+function setReplaceFilter(f) {
+  curReplaceFilter = f;
+  renderReplaceList();
+}
+
+function applyReplace(exName, exEq, exNote) {
+  if (replaceExIndex === null || !AppState.curWorkout) return;
+  var oldEx = AppState.curWorkout.exs[replaceExIndex];
+  
+  var newEx = {
+    id: oldEx.id,
+    name: exName,
+    eq: exEq,
+    note: exNote,
+    nw: oldEx.nw,
+    ss: oldEx.ss,
+    sets: oldEx.sets
+  };
+  
+  AppState.curWorkout.exs[replaceExIndex] = newEx;
+  
+  for(var si=0; si<newEx.sets.length; si++) {
+    var k = newEx.id + '_' + si;
+    if(AppState.wState[k]) {
+      delete AppState.wState[k];
+    }
+  }
+  
+  Storage.set("userPrograms", AppState.userPrograms);
+  saveWS();
+  
+  document.getElementById('replace-ex-modal').classList.remove('show');
+  showToast('Упражнение заменено!');
+  renderExs();
+  updateFinBtn();
+}
+
+function renderReplaceList() {
+  var filtersWrap = document.getElementById('replace-filters');
+  var listWrap = document.getElementById('replace-list');
+  
+  var mgNames = { 'chest': 'Грудь', 'back': 'Спина', 'legs': 'Ноги', 'shoulders': 'Плечи', 'arms': 'Руки', 'core': 'Пресс' };
+  var eqNames = { 'bw': 'Свой вес', 'barbell': 'Штанга', 'dumbbells': 'Гантели', 'pullup': 'Турник', 'dips': 'Брусья', 'bands': 'Резинки', 'rope': 'Канат', 'bench': 'Скамья', 'vest': 'Жилет', 'ez': 'EZ-гриф' };
+  
+  var filters = ['Все'].concat(Object.values(mgNames));
+  var filtersHtml = '';
+  filters.forEach(function(f){
+    var act = curReplaceFilter === f;
+    var bg = act ? 'var(--accent)' : 'var(--card2)';
+    var col = act ? '#fff' : 'var(--text2)';
+    var border = act ? 'var(--accent)' : 'var(--border)';
+    filtersHtml += '<div data-filter="'+f+'" onclick="setReplaceFilter(\\''+f+'\\')" style="background:'+bg+';color:'+col+';border:1px solid '+border+';padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;-webkit-tap-highlight-color:transparent;">'+f+'</div>';
+  });
+  filtersWrap.innerHTML = filtersHtml;
+  
+  var html = '';
+  var visibleCount = 0;
+  
+  Object.keys(DB).forEach(function(mgKey) {
+    var mgTitle = mgNames[mgKey];
+    if (curReplaceFilter !== 'Все' && mgTitle !== curReplaceFilter) return;
+    
+    html += '<div style="font-size:14px;font-weight:700;color:var(--text);margin-top:5px;margin-bottom:0px;">' + mgTitle + '</div>';
+    
+    DB[mgKey].forEach(function(ex) {
+      visibleCount++;
+      var eqText = eqNames[ex.eq] || ex.eq || '';
+      var noteText = ex.note ? '<div style="font-size:12px;color:var(--text-sec);margin-top:4px;">' + ex.note + '</div>' : '';
+      var eqBadge = eqText ? '<span style="font-size:10px;background:var(--bg);padding:2px 6px;border-radius:4px;color:var(--text-sec);margin-left:8px;vertical-align:middle">' + eqText + '</span>' : '';
+      
+      var isCustom = false;
+      if (customDB[mgKey]) isCustom = customDB[mgKey].some(function(cEx) { return cEx.name === ex.name; });
+      var customBadge = isCustom ? '<span style="font-size:10px;background:rgba(255,165,0,0.2);color:orange;padding:2px 6px;border-radius:4px;margin-left:4px;vertical-align:middle">Своё</span>' : '';
+      
+      html += '<div onclick="applyReplace(\\''+ex.name.replace(/'/g, "\\\\'")+'\\', \\''+ex.eq+'\\', \\''+(ex.note ? ex.note.replace(/'/g, "\\\\'") : '')+'\\')" style="background:var(--card2);border-radius:var(--radius-sm);border:1px solid var(--border);padding:12px;cursor:pointer;margin-bottom:0px;">';
+      html += '<div style="font-weight:600;font-size:14px;">' + ex.name + eqBadge + customBadge + '</div>' + noteText;
+      html += '</div>';
+    });
+  });
+
+  if (visibleCount === 0) html += '<div style="text-align:center;color:var(--text-sec);padding:20px;font-size:14px">Упражнений не найдено</div>';
+  listWrap.innerHTML = html;
+}
