@@ -1139,10 +1139,30 @@ function importData(e) {
 function forceUpdate() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(function(regs) {
-      if(regs.length===0) window.location.reload();
-      regs.forEach(function(r){ r.update(); });
+      if (regs.length === 0) { window.location.reload(); return; }
       showToast('Загружаем обновления...');
-      setTimeout(function(){ window.location.reload(); }, 2000);
+      // When controller changes (new SW takes over) — reload immediately
+      navigator.serviceWorker.addEventListener('controllerchange', function() {
+        window.location.reload();
+      });
+      regs.forEach(function(reg) {
+        reg.update().then(function() {
+          // If there's a waiting SW, tell it to skip waiting
+          if (reg.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          } else if (reg.installing) {
+            // New SW still installing — wait for it to reach waiting state
+            reg.installing.addEventListener('statechange', function(e) {
+              if (e.target.state === 'installed') {
+                e.target.postMessage({ type: 'SKIP_WAITING' });
+              }
+            });
+          } else {
+            // No pending update at all — just reload
+            window.location.reload();
+          }
+        });
+      });
     });
   } else {
     window.location.reload();
@@ -1891,7 +1911,29 @@ async function sendFeedback() {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
-      // SW registered
+
+      // Detect when a new SW is waiting (already downloaded, ready to activate)
+      function onUpdateFound() {
+        var newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', function() {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            // New version ready — show update prompt if not already shown
+            if (!document.getElementById('updatePromptModal').classList.contains('show')) {
+              checkForUpdates();
+            }
+          }
+        });
+      }
+
+      reg.addEventListener('updatefound', onUpdateFound);
+
+      // Also listen for controller change to reload
+      var refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function() {
+        if (!refreshing) { refreshing = true; window.location.reload(); }
+      });
+
     }).catch(function(){});
   });
 }
