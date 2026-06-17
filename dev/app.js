@@ -1,4 +1,35 @@
 
+var Storage = {
+  get: function(key, def) {
+    try {
+      var val = localStorage.getItem(key);
+      return val ? JSON.parse(val) : def;
+    } catch(e) { return def; }
+  },
+  set: function(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
+  },
+  getStr: function(key, def) {
+    try { return localStorage.getItem(key) || def; } catch(e) { return def; }
+  },
+  setStr: function(key, val) {
+    try { localStorage.setItem(key, val); } catch(e) {}
+  },
+  remove: function(key) {
+    try { localStorage.removeItem(key); } catch(e) {}
+  }
+};
+
+var AppState = {
+  AppState.userPrograms: [],
+  AppState.activeProgId: null,
+  P: null,
+  AppState.curMonth: null,
+  AppState.curWorkout: null,
+  AppState.curWeek: null,
+  AppState.wState: {}
+};
+
 // ─────────────────────────────────────────
 // PROGRAM DATA
 // ─────────────────────────────────────────
@@ -416,7 +447,7 @@ var DB = {
 
 // --- Custom DB Logic ---
 var customDB = {chest:[], back:[], legs:[], shoulders:[], arms:[], core:[]};
-try { var saved = JSON.parse(localStorage.getItem('customDB')); if (saved) customDB = saved; } catch(e){}
+var saved = Storage.get('customDB', null); if (saved) customDB = saved;
 Object.keys(customDB).forEach(function(mg) {
   if (DB[mg]) {
     DB[mg] = DB[mg].concat(customDB[mg]);
@@ -444,7 +475,7 @@ function saveAddEx() {
   
   if (!customDB[mg]) customDB[mg] = [];
   customDB[mg].push(newEx);
-  try { localStorage.setItem('customDB', JSON.stringify(customDB)); } catch(e){}
+  Storage.set('customDB', customDB);
   
   if (DB[mg]) DB[mg].push(newEx);
   
@@ -459,26 +490,19 @@ function saveAddEx() {
 
 
 
-var userPrograms = [];
-try { userPrograms = JSON.parse(localStorage.getItem("userPrograms")) || []; } catch(e){}
+AppState.userPrograms = Storage.get("AppState.userPrograms", []);
 
-if (userPrograms.length === 0) {
+if (AppState.userPrograms.length === 0) {
   var defaultProg = JSON.parse(JSON.stringify(TEMPLATES.find(function(t){return t.id === "prog_default";})));
   defaultProg.instanceId = "prog_default_1";
-  userPrograms.push(defaultProg);
-  localStorage.setItem("userPrograms", JSON.stringify(userPrograms));
+  AppState.userPrograms.push(defaultProg);
+  Storage.set("AppState.userPrograms", AppState.userPrograms);
 }
 
-var activeProgId = localStorage.getItem("activeProgId");
-if (!activeProgId && userPrograms.length > 0) activeProgId = userPrograms[0].instanceId;
+AppState.activeProgId = Storage.getStr("AppState.activeProgId", null);
+if (!AppState.activeProgId && AppState.userPrograms.length > 0) AppState.activeProgId = AppState.userPrograms[0].instanceId;
 
-var P = userPrograms.find(function(p){return p.instanceId === activeProgId;}) || userPrograms[0];
-
-
-// ─────────────────────────────────────────
-// STATE
-// ─────────────────────────────────────────
-var curMonth = null, curWorkout = null, curWeek = null, wState = {};
+AppState.P = AppState.userPrograms.find(function(p){return p.instanceId === AppState.activeProgId;}) || AppState.userPrograms[0];
 var tInterval = null, tSecs = 0, tRunning = false;
 var wakeLock = null;
 async function reqWL() { if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {} } }
@@ -610,7 +634,7 @@ function toggleSetTimer(k, minS, maxS, origTxt, exId, si) {
       txtEl.textContent = origTxt;
       playSound('tada');
       if('vibrate' in navigator) navigator.vibrate([200,100,200]);
-      if(!wState[k] || !wState[k].done) togD(exId, si, 'ok');
+      if(!AppState.wState[k] || !AppState.wState[k].done) togD(exId, si, 'ok');
     }
   }, 1000);
   
@@ -622,7 +646,7 @@ function updRest() {
   if(rv) rv.textContent = m+':'+(s<10?'0':'')+s;
 }
 function onNotesInput(v) {
-  wState.notes = v;
+  AppState.wState.notes = v;
   saveWS();
 }
 
@@ -630,19 +654,19 @@ function onNotesInput(v) {
 // STORAGE
 // ─────────────────────────────────────────
 function getWsKey(id) {
-  if (P.instanceId === 'prog_default_1') return 'ws_' + id;
-  return 'ws_' + P.instanceId + '_' + id;
+  if (AppState.P.instanceId === 'prog_default_1') return 'ws_' + id;
+  return 'ws_' + AppState.P.instanceId + '_' + id;
 }
 
 function saveWS() {
-  if (!curWorkout || !curWeek) return;
-  try { localStorage.setItem(getWsKey(curWorkout.id+'_w'+curWeek), JSON.stringify(wState)); } catch(e){}
+  if (!AppState.curWorkout || !AppState.curWeek) return;
+  Storage.set(getWsKey(AppState.curWorkout.id+'_w'+AppState.curWeek), AppState.wState);
 }
 function loadWS(id) {
-  try { var r=localStorage.getItem(getWsKey(id)); return r?JSON.parse(r):{}; } catch(e){ return {}; }
+  return Storage.get(getWsKey(id), {});
 }
 function getWeights() {
-  try { var r=localStorage.getItem('uw'); return r?JSON.parse(r):{}; } catch(e){ return {}; }
+  return Storage.get('uw', {});
 }
 function saveUW(exName, si, weight, diff, reps) {
   try {
@@ -661,20 +685,18 @@ function saveUW(exName, si, weight, diff, reps) {
     if (reps !== undefined) obj.r = reps;
     arr[si] = obj;
     w[exName] = arr;
-    localStorage.setItem('uw', JSON.stringify(w));
+    Storage.set('uw', w);
   } catch(e){}
 }
 function getHistory() {
-  try { var r=localStorage.getItem('wh'); return r?JSON.parse(r):[]; } catch(e){ return []; }
+  return Storage.get('wh', []);
 }
 function saveHistory(e) {
-  try {
-    var h=getHistory(); h.unshift(e);
-    localStorage.setItem('wh', JSON.stringify(h.slice(0,100)));
-  } catch(ex){}
+  var h=getHistory(); h.unshift(e);
+  Storage.set('wh', h.slice(0,100));
 }
 function getProgress(monthId) {
-  var m=P.months.find(function(x){return x.id===monthId;});
+  var m=AppState.P.months.find(function(x){return x.id===monthId;});
   if(!m) return 0;
   var weeksArr=m.weeks.split('–');
   var startW=parseInt(weeksArr[0])||1, endW=parseInt(weeksArr[1])||4;
@@ -736,9 +758,9 @@ function getProgramProgress(p) {
         tot++;
         var isDon = false;
         if (p.instanceId === "prog_default_1") {
-          isDon = localStorage.getItem("finished_"+w.id+"_w"+wk) === "true";
+          isDon = Storage.getStr("finished_"+w.id+"_w"+wk) === "true";
         } else {
-          isDon = localStorage.getItem("finished_"+p.instanceId+"_"+w.id+"_w"+wk) === "true";
+          isDon = Storage.getStr("finished_"+p.instanceId+"_"+w.id+"_w"+wk) === "true";
         }
         if (isDon) don++;
       }
@@ -750,12 +772,12 @@ function getProgramProgress(p) {
 function deleteProgram(e, id) {
   e.stopPropagation();
   if(!confirm("Удалить программу? История тренировок останется.")) return;
-  userPrograms = userPrograms.filter(function(p){return p.instanceId !== id;});
-  localStorage.setItem("userPrograms", JSON.stringify(userPrograms));
-  if(activeProgId === id) {
-    if(userPrograms.length > 0) activeProgId = userPrograms[0].instanceId;
-    else activeProgId = null;
-    localStorage.setItem("activeProgId", activeProgId);
+  AppState.userPrograms = AppState.userPrograms.filter(function(p){return p.instanceId !== id;});
+  localStorage.setItem("AppState.userPrograms", JSON.stringify(AppState.userPrograms));
+  if(AppState.activeProgId === id) {
+    if(AppState.userPrograms.length > 0) AppState.activeProgId = AppState.userPrograms[0].instanceId;
+    else AppState.activeProgId = null;
+    localStorage.setItem("AppState.activeProgId", AppState.activeProgId);
   }
   renderProgramsList();
 }
@@ -763,8 +785,8 @@ function deleteProgram(e, id) {
 function renderProgramsList() {
   var html = '<button class="btn" style="width:100%;margin-bottom:15px;background:var(--accent);color:#fff;border:none;box-shadow:0 4px 15px rgba(108,99,255,0.3);" onclick="document.getElementById(\'create-prog-modal\').classList.add(\'show\')">✨ Создать программу</button>';
   
-  userPrograms.forEach(function(prog) {
-    var isActive = prog.instanceId === activeProgId;
+  AppState.userPrograms.forEach(function(prog) {
+    var isActive = prog.instanceId === AppState.activeProgId;
     var pct = getProgramProgress(prog);
     html += '<div style="background:var(--card);border-radius:var(--radius);padding:15px;border:1px solid '+(isActive?'var(--accent)':'var(--border)')+';cursor:pointer;margin-bottom:12px" onclick="openProgram(\''+prog.instanceId+'\')">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px">' +
@@ -786,9 +808,9 @@ function renderProgramsList() {
 }
 
 function openProgram(id) {
-  activeProgId = id;
-  localStorage.setItem('activeProgId', id);
-  P = userPrograms.find(function(p){return p.instanceId===id;});
+  AppState.activeProgId = id;
+  localStorage.setItem('AppState.activeProgId', id);
+  P = AppState.userPrograms.find(function(p){return p.instanceId===id;});
   navTo('program-screen');
 }
 
@@ -940,8 +962,8 @@ function generateProgram() {
     months: months
   };
 
-  userPrograms.push(newProg);
-  localStorage.setItem('userPrograms', JSON.stringify(userPrograms));
+  AppState.userPrograms.push(newProg);
+  localStorage.setItem('AppState.userPrograms', JSON.stringify(AppState.userPrograms));
   
   document.getElementById('create-prog-modal').classList.remove('show');
   
@@ -1092,17 +1114,17 @@ function forceUpdate() {
   }
 }
 function goHome(){relWL();navTo('program-screen');}
-function goMonth(){relWL();stopTimer();renderMonth(curMonth);showScreen('month-screen');}
+function goMonth(){relWL();stopTimer();renderMonth(AppState.curMonth);showScreen('month-screen');}
 
 // ─────────────────────────────────────────
 // HOME
 // ─────────────────────────────────────────
 function renderProgram() {
-  document.getElementById('hs-title').innerText = P.name || (P.meta && P.meta.title) || 'Программа тренировок';
-  document.getElementById('hs-subtitle').innerText = (P.days ? P.days + ' тренировки в неделю' : (P.meta && P.meta.subtitle) || '');
+  document.getElementById('hs-title').innerText = AppState.P.name || (AppState.P.meta && AppState.P.meta.title) || 'Программа тренировок';
+  document.getElementById('hs-subtitle').innerText = (AppState.P.days ? AppState.P.days + ' тренировки в неделю' : (AppState.P.meta && AppState.P.meta.subtitle) || '');
   
   var html='';
-  P.months.forEach(function(m){
+  AppState.P.months.forEach(function(m){
     var pct=getProgress(m.id);
     html+='<div class="month-card" onclick="openMonth(\''+m.id+'\')">' +
       '<div class="mc-accent" style="background:linear-gradient(90deg,'+m.color+','+m.dark+')"></div>' +
@@ -1129,9 +1151,9 @@ function renderProgram() {
 // MONTH
 // ─────────────────────────────────────────
 function openMonth(mid) {
-  curMonth=P.months.find(function(m){return m.id===mid;});
-  if(!curMonth) return;
-  renderMonth(curMonth);
+  AppState.curMonth=AppState.P.months.find(function(m){return m.id===mid;});
+  if(!AppState.curMonth) return;
+  renderMonth(AppState.curMonth);
   showScreen('month-screen');
 }
 function renderMonth(m) {
@@ -1156,7 +1178,7 @@ function renderMonth(m) {
         prev+='<div class="ex-prev-item"><div class="ex-dot" style="background:'+m.color+'"></div><span>'+e.name+'</span></div>';
       });
       var more=w.exs.length-3;
-      var isFinished = ((P.instanceId === 'prog_default_1' ? localStorage.getItem('finished_'+w.id+'_w'+wk) : null) || localStorage.getItem('finished_'+P.instanceId+'_'+w.id+'_w'+wk)) === 'true';
+      var isFinished = ((AppState.P.instanceId === 'prog_default_1' ? localStorage.getItem('finished_'+w.id+'_w'+wk) : null) || Storage.getStr('finished_'+AppState.P.instanceId+'_'+w.id+'_w'+wk)) === 'true';
       var btnText = isFinished ? '✓ Завершено' : (pct>0 ? '▶ Продолжить' : '▶ Начать');
       var btnStyle = isFinished ? 'background:var(--green)' : 'background:linear-gradient(135deg,'+m.color+','+m.dark+')';
 
@@ -1183,14 +1205,14 @@ function renderMonth(m) {
 // ─────────────────────────────────────────
 function openWorkout(wid, wk) {
   var m=null, w=null;
-  P.months.forEach(function(mo){mo.workouts.forEach(function(wo){if(wo.id===wid){m=mo;w=wo;}});});
+  AppState.P.months.forEach(function(mo){mo.workouts.forEach(function(wo){if(wo.id===wid){m=mo;w=wo;}});});
   if(!w) return;
-  curMonth=m; curWorkout=w; curWeek=wk; wState=loadWS(wid+'_w'+wk);
+  AppState.curMonth=m; AppState.curWorkout=w; AppState.curWeek=wk; AppState.wState=loadWS(wid+'_w'+wk);
   document.getElementById('ws-title').textContent=w.label;
   document.getElementById('ws-sub').textContent=m.title+' · Неделя '+wk;
   document.getElementById('warmup-text').textContent=w.warm;
   document.getElementById('cooldown-text').textContent=w.cool;
-  document.getElementById('workout-notes').value = wState.notes || '';
+  document.getElementById('workout-notes').value = AppState.wState.notes || '';
   timerReset();
   stopRest();
   renderExs();
@@ -1200,7 +1222,7 @@ function openWorkout(wid, wk) {
 }
 
 function renderExs() {
-  var m=curMonth, w=curWorkout;
+  var m=AppState.curMonth, w=AppState.curWorkout;
   var uw=getWeights();
   var html='';
   w.exs.forEach(function(ex,ei){
@@ -1233,7 +1255,7 @@ function renderExs() {
       else if(gw.d==='ok') markerHtml='<span style="color:#30d158;font-size:14px;margin-left:3px;margin-bottom:1px">✓</span>';
 
       var k=ex.id+'_'+si;
-      var st=wState[k]||{};
+      var st=AppState.wState[k]||{};
       var done=!!st.done;
       var diff=st.diff||'';
       
@@ -1284,7 +1306,10 @@ function renderExs() {
 
     html+='<div class="ex-block">' +
       '<div class="ex-hdr">' +
-        '<div class="ex-num">Упражнение '+(ei+1)+' из '+w.exs.length+'</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+          '<div class="ex-num">Упражнение '+(ei+1)+' из '+w.exs.length+'</div>' +
+          '<button onclick="openReplaceModal('+ei+')" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;padding:4px">🔄 Заменить</button>' +
+        '</div>' +
         '<div class="ex-name">'+ex.name+'</div>' +
         (ex.ss?'<div class="superset-tag">'+ex.ss+'</div>':'') +
         (ex.note?'<div class="ex-note">💡 '+ex.note+'</div>':'') +
@@ -1300,11 +1325,11 @@ function renderExs() {
 
 function togD(exId, exName, si, d) {
   var k=exId+'_'+si;
-  var st=wState[k]||{};
+  var st=AppState.wState[k]||{};
   var isSame = st.diff === d;
   var nd = !isSame;
   var newD = nd ? d : null;
-  wState[k]=Object.assign({},st,{done:nd, diff:newD});
+  AppState.wState[k]=Object.assign({},st,{done:nd, diff:newD});
   
   var row=document.getElementById('row_'+k);
   var rp=document.getElementById('rp_'+k);
@@ -1332,11 +1357,11 @@ function togD(exId, exName, si, d) {
 }
 
 function getMaxW() {
-  try { return JSON.parse(localStorage.getItem('max_w')) || {}; } catch(e){ return {}; }
+  return Storage.get('max_w', {});
 }
 function onWInp(k, exId, exName, si, v) {
-  var st=wState[k]||{};
-  wState[k]=Object.assign({},st,{weight:v});
+  var st=AppState.wState[k]||{};
+  AppState.wState[k]=Object.assign({},st,{weight:v});
   var inp=document.getElementById('inp_'+k);
   if(inp) {
     inp.classList.toggle('hv',!!v);
@@ -1348,22 +1373,22 @@ function onWInp(k, exId, exName, si, v) {
 }
 
 function onWChange(k, exId, exName, si, v) {
-  var st=wState[k]||{};
+  var st=AppState.wState[k]||{};
   if(v) {
     var rinp=document.getElementById('rinp_'+k);
     var rv = rinp ? rinp.value : undefined;
     saveUW(exName, si, v, st.diff, rv);
-    var ex = curWorkout.exs.find(function(e){return e.id===exId;});
+    var ex = AppState.curWorkout.exs.find(function(e){return e.id===exId;});
     if (ex) {
       for(var i=si+1; i<ex.sets.length; i++) {
         var nK = exId+'_'+i;
-        var nSt = wState[nK] || {};
+        var nSt = AppState.wState[nK] || {};
         if (!nSt.weight) {
            var nInp = document.getElementById('inp_'+nK);
            if (nInp && !nInp.value) {
               nInp.value = v;
               nInp.classList.add('hv');
-              wState[nK] = Object.assign({}, nSt, {weight: v});
+              AppState.wState[nK] = Object.assign({}, nSt, {weight: v});
               var nrinp = document.getElementById('rinp_'+nK);
               var nrv = nrinp ? nrinp.value : undefined;
               saveUW(exName, i, v, nSt.diff, nrv);
@@ -1376,30 +1401,30 @@ function onWChange(k, exId, exName, si, v) {
 }
 
 function onRInp(k, exId, exName, si, v) {
-  var st=wState[k]||{};
-  wState[k]=Object.assign({},st,{reps:v});
+  var st=AppState.wState[k]||{};
+  AppState.wState[k]=Object.assign({},st,{reps:v});
   var inp=document.getElementById('rinp_'+k);
   if(inp) inp.classList.toggle('hv',!!v);
   saveWS();
 }
 
 function onRChange(k, exId, exName, si, v) {
-  var st=wState[k]||{};
+  var st=AppState.wState[k]||{};
   if(v) {
     var winp=document.getElementById('inp_'+k);
     var wv = winp ? winp.value : undefined;
     saveUW(exName, si, wv, st.diff, v);
-    var ex = curWorkout.exs.find(function(e){return e.id===exId;});
+    var ex = AppState.curWorkout.exs.find(function(e){return e.id===exId;});
     if (ex) {
       for(var i=si+1; i<ex.sets.length; i++) {
         var nK = exId+'_'+i;
-        var nSt = wState[nK] || {};
+        var nSt = AppState.wState[nK] || {};
         if (!nSt.reps) {
            var nInp = document.getElementById('rinp_'+nK);
            if (nInp && !nInp.value) {
               nInp.value = v;
               nInp.classList.add('hv');
-              wState[nK] = Object.assign({}, nSt, {reps: v});
+              AppState.wState[nK] = Object.assign({}, nSt, {reps: v});
               var nwinp = document.getElementById('inp_'+nK);
               var nwv = nwinp ? nwinp.value : undefined;
               saveUW(exName, i, nwv, nSt.diff, v);
@@ -1416,9 +1441,9 @@ function scr(el) {
 }
 
 function updateFinBtn() {
-  var total=curWorkout.exs.reduce(function(s,e){return s+e.sets.length;},0);
+  var total=AppState.curWorkout.exs.reduce(function(s,e){return s+e.sets.length;},0);
   var done=0;
-  Object.keys(wState).forEach(function(k){if(wState[k].done) done++;});
+  Object.keys(AppState.wState).forEach(function(k){if(AppState.wState[k].done) done++;});
   var btn=document.getElementById('finish-btn');
   var allD = (done===total && total>0);
   btn.textContent=allD ? '🏆 Все подходы выполнены!' : 'Завершить тренировку ('+done+'/'+total+')';
@@ -1427,7 +1452,7 @@ function updateFinBtn() {
 
 function confirmReset() {
   if(confirm('Сбросить прогресс этой тренировки?')){
-    wState={};saveWS();timerReset();renderExs();updateFinBtn();showToast('Прогресс сброшен');
+    AppState.wState={};saveWS();timerReset();renderExs();updateFinBtn();showToast('Прогресс сброшен');
   }
 }
 
@@ -1464,26 +1489,26 @@ function finishWorkout() {
   timerPause();
   relWL();
   playSound('tada');
-  var total=curWorkout.exs.reduce(function(s,e){return s+e.sets.length;},0);
+  var total=AppState.curWorkout.exs.reduce(function(s,e){return s+e.sets.length;},0);
   var done=0;
-  Object.keys(wState).forEach(function(k){if(wState[k].done) done++;});
-  var doneExs=curWorkout.exs.filter(function(ex){
-    return ex.sets.every(function(s,si){var k=ex.id+'_'+si;return wState[k]&&wState[k].done;});
+  Object.keys(AppState.wState).forEach(function(k){if(AppState.wState[k].done) done++;});
+  var doneExs=AppState.curWorkout.exs.filter(function(ex){
+    return ex.sets.every(function(s,si){var k=ex.id+'_'+si;return AppState.wState[k]&&AppState.wState[k].done;});
   }).length;
   var m=Math.floor(tSecs/60), s=tSecs%60;
-  var totalTonnage = parseFloat(localStorage.getItem('tonnage')) || 0;
+  var totalTonnage = parseFloat(Storage.getStr('tonnage')) || 0;
   var mw = getMaxW();
   var newPRs = 0;
   var curTonnage = 0;
 
-  curWorkout.exs.forEach(function(ex) {
+  AppState.curWorkout.exs.forEach(function(ex) {
     var exMax = mw[ex.id] || 0;
     var hitPR = false;
     ex.sets.forEach(function(s, si) {
       var k = ex.id + '_' + si;
-      if (wState[k] && wState[k].done && wState[k].weight) {
-        var w = parseFloat(wState[k].weight) || 0;
-        var rStr = wState[k].reps || s.r || s;
+      if (AppState.wState[k] && AppState.wState[k].done && AppState.wState[k].weight) {
+        var w = parseFloat(AppState.wState[k].weight) || 0;
+        var rStr = AppState.wState[k].reps || s.r || s;
         var reps = parseInt(rStr) || 0;
         if(isNaN(curTonnage)) curTonnage = 0; // fallback if already NaN
         curTonnage += w * reps;
@@ -1494,8 +1519,8 @@ function finishWorkout() {
     if (exMax > (mw[ex.id] || 0)) mw[ex.id] = exMax;
   });
 
-  localStorage.setItem('max_w', JSON.stringify(mw));
-  localStorage.setItem('tonnage', totalTonnage + curTonnage);
+  Storage.set('max_w', mw);
+  Storage.setStr('tonnage', totalTonnage + curTonnage);
   updateGreeting();
 
   document.getElementById('c-sets').textContent=done;
@@ -1512,11 +1537,11 @@ function finishWorkout() {
     }
   }
 
-  document.getElementById('c-sub').textContent=curWorkout.label+' · Неделя '+curWeek;
-  localStorage.setItem('finished_'+P.instanceId+'_'+curWorkout.id+'_w'+curWeek, 'true');
-  saveHistory({wid:curWorkout.id+'_w'+curWeek,label:curWorkout.label+' (Неделя '+curWeek+')',month:curMonth.title,color:curMonth.color,date:new Date().toISOString(),done:done,total:total,mins:m,exs:doneExs,tonnage:curTonnage});
+  document.getElementById('c-sub').textContent=AppState.curWorkout.label+' · Неделя '+AppState.curWeek;
+  Storage.setStr('finished_'+AppState.P.instanceId+'_'+AppState.curWorkout.id+'_w'+AppState.curWeek, 'true');
+  saveHistory({wid:AppState.curWorkout.id+'_w'+AppState.curWeek,label:AppState.curWorkout.label+' (Неделя '+AppState.curWeek+')',month:AppState.curMonth.title,color:AppState.curMonth.color,date:new Date().toISOString(),done:done,total:total,mins:m,exs:doneExs,tonnage:curTonnage});
   var aiBtn = document.getElementById('c-ai-btn');
-  if(aiBtn) aiBtn.style.display = localStorage.getItem('gemini_key') ? 'block' : 'none';
+  if(aiBtn) aiBtn.style.display = Storage.getStr('gemini_key') ? 'block' : 'none';
   document.getElementById('c-overlay').classList.add('show');
 }
 function closeComplete(){document.getElementById('c-overlay').classList.remove('show');goMonth();}
@@ -1546,7 +1571,7 @@ function renderHistory() {
 }
 function clearHistory(){
   if(confirm('Очистить всю историю?')){
-    try{localStorage.removeItem('wh');}catch(e){}
+    Storage.remove('wh');
     renderHistory(); showToast('История очищена');
   }
 }
@@ -1592,10 +1617,10 @@ function updateGreeting() {
   });
   if(changed) {
     localStorage.setItem('wh', JSON.stringify(h));
-    localStorage.setItem('tonnage', totalTon);
+    Storage.setStr('tonnage', totalTon);
   }
 
-  var nm = localStorage.getItem('profName') || '';
+  var nm = Storage.getStr('profName') || '';
   var el = document.getElementById('greet-title');
   if(el) el.textContent = nm ? 'Привет, ' + nm + '! 👋' : 'Программа тренировок';
   var pn = document.getElementById('prof-name');
@@ -1603,12 +1628,12 @@ function updateGreeting() {
   var tonEl = document.getElementById('prof-tonnage');
   var wEl = document.getElementById('prof-workouts');
   if(tonEl) {
-    var ton = parseFloat(localStorage.getItem('tonnage')) || 0;
+    var ton = parseFloat(Storage.getStr('tonnage')) || 0;
     tonEl.textContent = (ton/1000).toFixed(1);
   }
   if(wEl) wEl.textContent = h.length;
   var gkEl = document.getElementById('gemini-key');
-  if(gkEl && !gkEl.value) { var gk = localStorage.getItem('gemini_key'); if(gk) gkEl.value = gk; }
+  if(gkEl && !gkEl.value) { var gk = Storage.getStr('gemini_key'); if(gk) gkEl.value = gk; }
   var ch = document.getElementById('prof-chart');
   if(ch) {
     var chData = h.filter(function(x){return x.tonnage>0;}).slice(0,5).reverse();
@@ -1626,14 +1651,14 @@ function updateGreeting() {
 function setTheme(c1, c2) {
   document.documentElement.style.setProperty('--accent', c1);
   document.documentElement.style.setProperty('--accent2', c2);
-  localStorage.setItem('theme_c1', c1);
-  localStorage.setItem('theme_c2', c2);
+  Storage.setStr('theme_c1', c1);
+  Storage.setStr('theme_c2', c2);
 }
-var sc1=localStorage.getItem('theme_c1'), sc2=localStorage.getItem('theme_c2');
+var sc1=Storage.getStr('theme_c1'), sc2=Storage.getStr('theme_c2');
 if(sc1&&sc2){setTheme(sc1,sc2);}
 
 function saveApiKey(v) {
-  localStorage.setItem('gemini_key', v.trim());
+  Storage.setStr('gemini_key', v.trim());
 }
 function toggleKeyVisibility() {
   var inp = document.getElementById('gemini-key');
@@ -1643,7 +1668,7 @@ function toggleKeyVisibility() {
   eye.textContent = inp.type === 'password' ? '👁' : '🙈';
 }
 async function runAiAnalysis() {
-  var key = localStorage.getItem('gemini_key') || '';
+  var key = Storage.getStr('gemini_key') || '';
   if(!key) {
     showToast('Добавь Gemini API ключ в Профиле!');
     return;
@@ -1653,9 +1678,9 @@ async function runAiAnalysis() {
     showToast('Пока нет истории тренировок для анализа.');
     return;
   }
-  var totalTon = parseFloat(localStorage.getItem('tonnage')) || 0;
+  var totalTon = parseFloat(Storage.getStr('tonnage')) || 0;
   var mw = getMaxW();
-  var nm = localStorage.getItem('profName') || 'Атлет';
+  var nm = Storage.getStr('profName') || 'Атлет';
   var histStr = h.map(function(x, i) {
     return (i+1)+'. '+x.label+' ('+new Date(x.date).toLocaleDateString('ru')+') — '+
       x.done+'/'+x.total+' подходов, '+x.mins+' мин'+(x.tonnage?', тоннаж '+Math.round(x.tonnage)+'кг':'');
@@ -1697,7 +1722,7 @@ async function runAiAnalysis() {
   }
 }
 function saveName(v) {
-  localStorage.setItem('profName', v.trim());
+  Storage.setStr('profName', v.trim());
   updateGreeting();
 }
 updateGreeting();
@@ -1724,7 +1749,7 @@ async function checkForUpdates() {
         if (!res.ok) return;
         const data = await res.json();
         
-        const currentVersion = localStorage.getItem('appVersion') || '0.0.1';
+        const currentVersion = Storage.getStr('appVersion') || '0.0.1';
         
         const appVersionEl = document.getElementById('app-version');
         if(appVersionEl && data.version) {
@@ -1732,8 +1757,8 @@ async function checkForUpdates() {
         }
 
         if (data.version !== currentVersion) {
-            localStorage.setItem('pendingChangelog', data.changelog || '');
-            localStorage.setItem('pendingVersion', data.version);
+            Storage.setStr('pendingChangelog', data.changelog || '');
+            Storage.setStr('pendingVersion', data.version);
             const span = document.getElementById('newVersionSpan');
             if (span) span.textContent = 'v' + data.version;
             document.getElementById('updatePromptModal').classList.add('show');
@@ -1744,10 +1769,10 @@ async function checkForUpdates() {
 }
 
 function checkChangelog() {
-    const pendingChangelog = localStorage.getItem('pendingChangelog');
-    const pendingVersion = localStorage.getItem('pendingVersion');
+    const pendingChangelog = Storage.getStr('pendingChangelog');
+    const pendingVersion = Storage.getStr('pendingVersion');
     if (pendingChangelog && pendingVersion) {
-        localStorage.setItem('appVersion', pendingVersion);
+        Storage.setStr('appVersion', pendingVersion);
         
         const versionSpan = document.getElementById('changelogVersionSpan');
         if(versionSpan) versionSpan.textContent = 'v' + pendingVersion;
@@ -1757,10 +1782,10 @@ function checkChangelog() {
         
         document.getElementById('changelogModal').classList.add('show');
         
-        localStorage.removeItem('pendingChangelog');
-        localStorage.removeItem('pendingVersion');
-    } else if (!localStorage.getItem('appVersion')) {
-        localStorage.setItem('appVersion', '0.0.1');
+        Storage.remove('pendingChangelog');
+        Storage.remove('pendingVersion');
+    } else if (!Storage.getStr('appVersion')) {
+        Storage.setStr('appVersion', '0.0.1');
     }
 }
 
