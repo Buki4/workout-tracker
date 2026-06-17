@@ -845,6 +845,16 @@ function generateProgram() {
     return Object.assign({}, validExs[idx % validExs.length]);
   }
 
+  // Helper: interleave two arrays [a1,a2] + [b1,b2] = [a1,b1,a2,b2]
+  function interleave(a, b) {
+    var res = [];
+    for (var i = 0; i < Math.max(a.length, b.length); i++) {
+      if (i < a.length) res.push(a[i]);
+      if (i < b.length) res.push(b[i]);
+    }
+    return res;
+  }
+
   // Generate Workouts based on Split
   var workouts = [];
   if (split === 'fullbody') {
@@ -852,14 +862,21 @@ function generateProgram() {
       workouts.push({
         id: "w"+(d+1), label: "Фулбоди "+(d+1), tag: String.fromCharCode(1040+d), sub: "Всё тело",
         warm: "Суставная гимнастика 5 мин", cool: "Растяжка 5 мин",
+        // Принцип: крупные группы сначала, мелкие после; грудь/спина чередуются
         exs: [ getEx('legs',d), getEx('chest',d), getEx('back',d), getEx('shoulders',d), getEx('arms',d*2), getEx('core',d) ]
       });
     }
   } else if (split === 'upper_lower') {
     for(var d=0; d<days; d++) {
       if(d%2===0) {
+        // Верх: чередуем грудь/спину, потом плечи, затем руки (трицепс перед бицепсом т.к. добавляем после жимов работы)
+        var upperExs = interleave([getEx('chest',d), getEx('chest',d+2)], [getEx('back',d), getEx('back',d+2)]);
+        upperExs.push(getEx('shoulders',d));
+        upperExs.push(getEx('arms',1));  // трицепс
+        upperExs.push(getEx('arms',0));  // бицепс
+        upperExs.push(getEx('core',d));
         workouts.push({ id:"w"+(d+1), label:"Верх "+(d+1), tag:"В", sub:"Верхняя часть тела", warm:"Суставная гимнастика", cool:"Растяжка верха",
-          exs: [ getEx('chest',d), getEx('back',d), getEx('shoulders',d), getEx('arms',d), getEx('arms',d+1), getEx('core',d) ] });
+          exs: upperExs });
       } else {
         workouts.push({ id:"w"+(d+1), label:"Низ "+(d+1), tag:"Н", sub:"Ноги и пресс", warm:"Суставная гимнастика", cool:"Растяжка ног",
           exs: [ getEx('legs',0), getEx('legs',1), getEx('legs',2), getEx('legs',3), getEx('legs',4), getEx('core',d) ] });
@@ -870,11 +887,16 @@ function generateProgram() {
     for(var d=0; d<days; d++) {
       var type = t[d%3];
       if (type==='Push') {
+        // Жимовый день: чередуем грудь и плечи, потом трицепс
+        var pushExs = interleave([getEx('chest',0), getEx('chest',1)], [getEx('shoulders',0), getEx('shoulders',1)]);
+        pushExs.push(getEx('arms',1));  // Французский жим (трицепс)
+        pushExs.push(getEx('arms',5));  // Разгибания из-за головы (трицепс)
         workouts.push({ id:"w"+(d+1), label:"Жимовой день", tag:"Ж", sub:"Грудь, Плечи, Трицепс", warm:"Разминка", cool:"Растяжка",
-          exs: [ getEx('chest',0), getEx('chest',1), getEx('shoulders',0), getEx('shoulders',1), getEx('arms',2), getEx('arms',3) ] });
+          exs: pushExs });
       } else if (type==='Pull') {
+        // Тяговый день: спина сначала, задняя дельта, потом бицепс
         workouts.push({ id:"w"+(d+1), label:"Тяговый день", tag:"Т", sub:"Спина, Бицепс, Задняя дельта", warm:"Разминка", cool:"Растяжка",
-          exs: [ getEx('back',0), getEx('back',1), getEx('back',2), getEx('shoulders',2), getEx('arms',0), getEx('arms',1) ] });
+          exs: [ getEx('back',0), getEx('back',1), getEx('back',2), getEx('shoulders',2), getEx('arms',0), getEx('arms',3) ] });
       } else {
         workouts.push({ id:"w"+(d+1), label:"День ног", tag:"Н", sub:"Ноги и пресс", warm:"Разминка", cool:"Растяжка",
           exs: [ getEx('legs',0), getEx('legs',1), getEx('legs',2), getEx('legs',3), getEx('core',0), getEx('core',1) ] });
@@ -888,8 +910,9 @@ function generateProgram() {
       if(type==='Грудь') e = [getEx('chest',0), getEx('chest',1), getEx('chest',2), getEx('core',0)];
       if(type==='Спина') e = [getEx('back',0), getEx('back',1), getEx('back',2), getEx('core',1)];
       if(type==='Ноги') e = [getEx('legs',0), getEx('legs',1), getEx('legs',2), getEx('legs',3), getEx('legs',4)];
-      if(type==='Плечи/Руки') e = [getEx('shoulders',0), getEx('shoulders',1), getEx('arms',0), getEx('arms',2), getEx('arms',1)];
-      if(type==='Грудь/Спина') e = [getEx('chest',0), getEx('chest',1), getEx('back',0), getEx('back',1)];
+      if(type==='Плечи/Руки') e = [getEx('shoulders',0), getEx('shoulders',1), getEx('arms',1), getEx('arms',0), getEx('arms',2)];
+      // Грудь/Спина: чередуем грудь-спина-грудь-спина
+      if(type==='Грудь/Спина') e = interleave([getEx('chest',0), getEx('chest',1)], [getEx('back',0), getEx('back',1)]);
       if(type==='Ноги/Плечи') e = [getEx('legs',0), getEx('legs',1), getEx('shoulders',0), getEx('shoulders',1)];
       workouts.push({ id:"w"+(d+1), label:type, tag:String.fromCharCode(1040+d), sub:"Бро-сплит", warm:"Разминка", cool:"Растяжка", exs: e });
     }
@@ -1951,7 +1974,19 @@ if ('serviceWorker' in navigator) {
   // Open modal — called from event delegation on .replace-ex-btn
   window.openReplaceModal = function(ei) {
     replaceExIndex = ei;
+
+    // Smart filter: detect muscle group of the exercise being replaced
     curFilter = 'Все';
+    if (AppState.curWorkout && AppState.curWorkout.exs[ei]) {
+      var exName = AppState.curWorkout.exs[ei].name;
+      for (var mg in DB) {
+        if (DB[mg].some(function(ex) { return ex.name === exName; })) {
+          curFilter = mgNames[mg] || 'Все';
+          break;
+        }
+      }
+    }
+
     document.getElementById('replace-ex-modal').classList.add('show');
     render();
   };
