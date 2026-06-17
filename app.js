@@ -1363,7 +1363,7 @@ function renderExs() {
       '<div class="ex-hdr">' +
         '<div style="display:flex;justify-content:space-between;align-items:center">' +
           '<div class="ex-num">Упражнение '+(ei+1)+' из '+w.exs.length+'</div>' +
-          '<button class="replace-ex-btn" data-ei="'+ei+'" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;padding:4px 0">🔄 Заменить</button>' +
+          '<button class="replace-ex-btn" data-ei="'+ei+'" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;padding:8px 4px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;">🔄 Заменить</button>' +
         '</div>' +
         '<div class="ex-name">'+ex.name+'</div>' +
         (ex.ss?'<div class="superset-tag">'+ex.ss+'</div>':'') +
@@ -2042,10 +2042,11 @@ if ('serviceWorker' in navigator) {
     applyReplace(row.dataset.name, row.dataset.eq, row.dataset.note);
   });
 
-  // Event delegation for .replace-ex-btn (set after renderExs builds the DOM)
-  document.getElementById('workout-screen').addEventListener('click', function(e) {
+  // Event delegation for .replace-ex-btn — listen on document for reliability on iOS
+  document.addEventListener('click', function(e) {
     var btn = e.target.closest('.replace-ex-btn');
     if (!btn) return;
+    e.stopPropagation();
     window.openReplaceModal(parseInt(btn.dataset.ei, 10));
   });
 
