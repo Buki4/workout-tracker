@@ -1,10 +1,7 @@
 
 var Storage = {
   get: function(key, def) {
-    try {
-      var val = localStorage.getItem(key);
-      return val ? JSON.parse(val) : def;
-    } catch(e) { return def; }
+    try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch(e) { return def; }
   },
   set: function(key, val) {
     try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
@@ -446,8 +443,7 @@ var DB = {
 
 
 // --- Custom DB Logic ---
-var customDB = {chest:[], back:[], legs:[], shoulders:[], arms:[], core:[]};
-var saved = Storage.get('customDB', null); if (saved) customDB = saved;
+const customDB = Storage.get('customDB', {chest:[], back:[], legs:[], shoulders:[], arms:[], core:[]});
 Object.keys(customDB).forEach(function(mg) {
   if (DB[mg]) {
     DB[mg] = DB[mg].concat(customDB[mg]);
@@ -487,19 +483,16 @@ function saveAddEx() {
   }
 }
 
-
-
-
-AppState.userPrograms = Storage.get("userPrograms", []);
+AppState.userPrograms = Storage.get("AppState.userPrograms", []);
 
 if (AppState.userPrograms.length === 0) {
   var defaultProg = JSON.parse(JSON.stringify(TEMPLATES.find(function(t){return t.id === "prog_default";})));
   defaultProg.instanceId = "prog_default_1";
   AppState.userPrograms.push(defaultProg);
-  Storage.set("userPrograms", AppState.userPrograms);
+  Storage.set("AppState.userPrograms", AppState.userPrograms);
 }
 
-AppState.activeProgId = Storage.getStr("activeProgId", null);
+AppState.activeProgId = Storage.getStr("AppState.activeProgId", null);
 if (!AppState.activeProgId && AppState.userPrograms.length > 0) AppState.activeProgId = AppState.userPrograms[0].instanceId;
 
 AppState.P = AppState.userPrograms.find(function(p){return p.instanceId === AppState.activeProgId;}) || AppState.userPrograms[0];
@@ -773,11 +766,11 @@ function deleteProgram(e, id) {
   e.stopPropagation();
   if(!confirm("Удалить программу? История тренировок останется.")) return;
   AppState.userPrograms = AppState.userPrograms.filter(function(p){return p.instanceId !== id;});
-  localStorage.setItem("userPrograms", JSON.stringify(AppState.userPrograms));
+  Storage.set("userPrograms", JSON.stringify(AppState.userPrograms));
   if(AppState.activeProgId === id) {
     if(AppState.userPrograms.length > 0) AppState.activeProgId = AppState.userPrograms[0].instanceId;
     else AppState.activeProgId = null;
-    localStorage.setItem("activeProgId", AppState.activeProgId);
+    Storage.setStr("activeProgId", AppState.activeProgId);
   }
   renderProgramsList();
 }
@@ -809,7 +802,7 @@ function renderProgramsList() {
 
 function openProgram(id) {
   AppState.activeProgId = id;
-  localStorage.setItem('activeProgId', id);
+  Storage.setStr('activeProgId', id);
   AppState.P = AppState.userPrograms.find(function(p){return p.instanceId===id;});
   navTo('program-screen');
 }
@@ -962,8 +955,50 @@ function generateProgram() {
     months: months
   };
 
+
+// --- Custom DB Logic ---
+var customDB = {chest:[], back:[], legs:[], shoulders:[], arms:[], core:[]};
+var saved = Storage.get('customDB', null); if (saved) customDB = saved;
+Object.keys(customDB).forEach(function(mg) {
+  if (DB[mg]) {
+    DB[mg] = DB[mg].concat(customDB[mg]);
+  }
+});
+
+function openAddExModal() {
+  document.getElementById('add-ex-name').value = '';
+  document.getElementById('add-ex-note').value = '';
+  document.getElementById('add-ex-modal').classList.add('show');
+}
+
+function saveAddEx() {
+  var name = document.getElementById('add-ex-name').value.trim();
+  var mg = document.getElementById('add-ex-mg').value;
+  var eq = document.getElementById('add-ex-eq').value;
+  var note = document.getElementById('add-ex-note').value.trim();
+
+  if (!name) {
+    showToast('Введите название!');
+    return;
+  }
+
+  var newEx = { name: name, eq: eq, note: note };
+  
+  if (!customDB[mg]) customDB[mg] = [];
+  customDB[mg].push(newEx);
+  Storage.set('customDB', customDB);
+  
+  if (DB[mg]) DB[mg].push(newEx);
+  
+  document.getElementById('add-ex-modal').classList.remove('show');
+  showToast('Упражнение добавлено!');
+  
+  if (document.getElementById('library-screen').classList.contains('active')) {
+    renderLibrary();
+  }
+}
   AppState.userPrograms.push(newProg);
-  localStorage.setItem('userPrograms', JSON.stringify(AppState.userPrograms));
+  Storage.set('userPrograms', JSON.stringify(AppState.userPrograms));
   
   document.getElementById('create-prog-modal').classList.remove('show');
   
@@ -1027,7 +1062,7 @@ function renderLibrary() {
     }
   });
 
-  var html = '<button class="btn btn-primary" style="margin-bottom:15px;width:100%" onclick="openAddExModal()">+ Свое упражнение</button>';
+  var html = '';
   var uw = getWeights();
   var visibleCount = 0;
   
@@ -1073,7 +1108,7 @@ function renderLibrary() {
     });
   });
 
-  if (visibleCount === 0) html += '<div style="text-align:center;color:var(--text-sec);padding:20px;font-size:14px">Упражнений не найдено</div>';
+  if (!html) html = '<div style="text-align:center;color:var(--text-sec);padding:20px;font-size:14px">Упражнений не найдено</div>';
   itemsWrap.innerHTML = '<div style="color:var(--text3);font-size:12px;margin-bottom:-10px">Отображено упражнений: '+visibleCount+'</div>' + html;
 }
 
@@ -1178,7 +1213,7 @@ function renderMonth(m) {
         prev+='<div class="ex-prev-item"><div class="ex-dot" style="background:'+m.color+'"></div><span>'+e.name+'</span></div>';
       });
       var more=w.exs.length-3;
-      var isFinished = ((AppState.P.instanceId === 'prog_default_1' ? localStorage.getItem('finished_'+w.id+'_w'+wk) : null) || Storage.getStr('finished_'+AppState.P.instanceId+'_'+w.id+'_w'+wk)) === 'true';
+      var isFinished = ((AppState.P.instanceId === 'prog_default_1' ? Storage.getStr('finished_'+w.id+'_w'+wk) : null) || Storage.getStr('finished_'+AppState.P.instanceId+'_'+w.id+'_w'+wk)) === 'true';
       var btnText = isFinished ? '✓ Завершено' : (pct>0 ? '▶ Продолжить' : '▶ Начать');
       var btnStyle = isFinished ? 'background:var(--green)' : 'background:linear-gradient(135deg,'+m.color+','+m.dark+')';
 
@@ -1308,7 +1343,7 @@ function renderExs() {
       '<div class="ex-hdr">' +
         '<div style="display:flex;justify-content:space-between;align-items:center">' +
           '<div class="ex-num">Упражнение '+(ei+1)+' из '+w.exs.length+'</div>' +
-          '<button onclick="openReplaceModal('+ei+')" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;padding:4px">🔄 Заменить</button>' +
+          '<button class="replace-ex-btn" data-ei="'+ei+'" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;padding:4px 0">🔄 Заменить</button>' +
         '</div>' +
         '<div class="ex-name">'+ex.name+'</div>' +
         (ex.ss?'<div class="superset-tag">'+ex.ss+'</div>':'') +
@@ -1616,7 +1651,7 @@ function updateGreeting() {
     totalTon += (x.tonnage || 0);
   });
   if(changed) {
-    localStorage.setItem('wh', JSON.stringify(h));
+    Storage.set('wh', h);
     Storage.setStr('tonnage', totalTon);
   }
 
@@ -1861,99 +1896,142 @@ if ('serviceWorker' in navigator) {
   });
 }
 
+
 // ─────────────────────────────────────────
 // REPLACE EXERCISE FEATURE
 // ─────────────────────────────────────────
-var replaceExIndex = null;
-var curReplaceFilter = 'Все';
+(function() {
+  var replaceExIndex = null;
+  var curFilter = 'Все';
+  var mgNames = {chest:'Грудь', back:'Спина', legs:'Ноги', shoulders:'Плечи', arms:'Руки', core:'Пресс'};
+  var eqNames = {bw:'Свой вес', barbell:'Штанга', dumbbells:'Гантели', pullup:'Турник', dips:'Брусья', bands:'Резинки', rope:'Канат', bench:'Скамья', vest:'Жилет', ez:'EZ-гриф'};
 
-function openReplaceModal(ei) {
-  replaceExIndex = ei;
-  curReplaceFilter = 'Все';
-  document.getElementById('replace-ex-modal').classList.add('show');
-  renderReplaceList();
-}
-
-function setReplaceFilter(f) {
-  curReplaceFilter = f;
-  renderReplaceList();
-}
-
-function applyReplace(exName, exEq, exNote) {
-  if (replaceExIndex === null || !AppState.curWorkout) return;
-  var oldEx = AppState.curWorkout.exs[replaceExIndex];
-  
-  var newEx = {
-    id: oldEx.id,
-    name: exName,
-    eq: exEq,
-    note: exNote,
-    nw: oldEx.nw,
-    ss: oldEx.ss,
-    sets: oldEx.sets
+  // Open modal — called from event delegation on .replace-ex-btn
+  window.openReplaceModal = function(ei) {
+    replaceExIndex = ei;
+    curFilter = 'Все';
+    document.getElementById('replace-ex-modal').classList.add('show');
+    render();
   };
-  
-  AppState.curWorkout.exs[replaceExIndex] = newEx;
-  
-  for(var si=0; si<newEx.sets.length; si++) {
-    var k = newEx.id + '_' + si;
-    if(AppState.wState[k]) {
-      delete AppState.wState[k];
-    }
-  }
-  
-  Storage.set("userPrograms", AppState.userPrograms);
-  saveWS();
-  
-  document.getElementById('replace-ex-modal').classList.remove('show');
-  showToast('Упражнение заменено!');
-  renderExs();
-  updateFinBtn();
-}
 
-function renderReplaceList() {
-  var filtersWrap = document.getElementById('replace-filters');
-  var listWrap = document.getElementById('replace-list');
-  
-  var mgNames = { 'chest': 'Грудь', 'back': 'Спина', 'legs': 'Ноги', 'shoulders': 'Плечи', 'arms': 'Руки', 'core': 'Пресс' };
-  var eqNames = { 'bw': 'Свой вес', 'barbell': 'Штанга', 'dumbbells': 'Гантели', 'pullup': 'Турник', 'dips': 'Брусья', 'bands': 'Резинки', 'rope': 'Канат', 'bench': 'Скамья', 'vest': 'Жилет', 'ez': 'EZ-гриф' };
-  
-  var filters = ['Все'].concat(Object.values(mgNames));
-  var filtersHtml = '';
-  filters.forEach(function(f){
-    var act = curReplaceFilter === f;
-    var bg = act ? 'var(--accent)' : 'var(--card2)';
-    var col = act ? '#fff' : 'var(--text2)';
-    var border = act ? 'var(--accent)' : 'var(--border)';
-    filtersHtml += '<div data-filter="'+f+'" onclick="setReplaceFilter(\\''+f+'\\')" style="background:'+bg+';color:'+col+';border:1px solid '+border+';padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;-webkit-tap-highlight-color:transparent;">'+f+'</div>';
-  });
-  filtersWrap.innerHTML = filtersHtml;
-  
-  var html = '';
-  var visibleCount = 0;
-  
-  Object.keys(DB).forEach(function(mgKey) {
-    var mgTitle = mgNames[mgKey];
-    if (curReplaceFilter !== 'Все' && mgTitle !== curReplaceFilter) return;
-    
-    html += '<div style="font-size:14px;font-weight:700;color:var(--text);margin-top:5px;margin-bottom:0px;">' + mgTitle + '</div>';
-    
-    DB[mgKey].forEach(function(ex) {
-      visibleCount++;
-      var eqText = eqNames[ex.eq] || ex.eq || '';
-      var noteText = ex.note ? '<div style="font-size:12px;color:var(--text-sec);margin-top:4px;">' + ex.note + '</div>' : '';
-      var eqBadge = eqText ? '<span style="font-size:10px;background:var(--bg);padding:2px 6px;border-radius:4px;color:var(--text-sec);margin-left:8px;vertical-align:middle">' + eqText + '</span>' : '';
-      
-      var isCustom = false;
-      if (customDB[mgKey]) isCustom = customDB[mgKey].some(function(cEx) { return cEx.name === ex.name; });
-      var customBadge = isCustom ? '<span style="font-size:10px;background:rgba(255,165,0,0.2);color:orange;padding:2px 6px;border-radius:4px;margin-left:4px;vertical-align:middle">Своё</span>' : '';
-      
-      html += '<div onclick="applyReplace(\\''+ex.name.replace(/'/g, "\\\\'")+'\\', \\''+ex.eq+'\\', \\''+(ex.note ? ex.note.replace(/'/g, "\\\\'") : '')+'\\')" style="background:var(--card2);border-radius:var(--radius-sm);border:1px solid var(--border);padding:12px;cursor:pointer;margin-bottom:0px;">';
-      html += '<div style="font-weight:600;font-size:14px;">' + ex.name + eqBadge + customBadge + '</div>' + noteText;
-      html += '</div>';
+  function render() {
+    var filtersWrap = document.getElementById('replace-filters');
+    var listWrap = document.getElementById('replace-list');
+
+    // Render filter pills
+    var fhtml = '';
+    ['Все'].concat(Object.values(mgNames)).forEach(function(f) {
+      var act = curFilter === f;
+      var pill = document.createElement('div');
+      pill.textContent = f;
+      pill.dataset.filter = f;
+      pill.style.cssText = 'padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;border:1px solid ' + (act ? 'var(--accent)' : 'var(--border)') + ';background:' + (act ? 'var(--accent)' : 'var(--card2)') + ';color:' + (act ? '#fff' : 'var(--text2)') + ';-webkit-tap-highlight-color:transparent;';
+      fhtml += pill.outerHTML;
     });
+    filtersWrap.innerHTML = fhtml;
+
+    // Render list
+    var items = [];
+    Object.keys(DB).forEach(function(mgKey) {
+      var mgTitle = mgNames[mgKey];
+      if (curFilter !== 'Все' && mgTitle !== curFilter) return;
+      items.push({type:'header', label: mgTitle});
+      DB[mgKey].forEach(function(ex) {
+        items.push({type:'ex', ex: ex, mg: mgKey});
+      });
+    });
+
+    listWrap.innerHTML = '';
+    items.forEach(function(item) {
+      if (item.type === 'header') {
+        var hdr = document.createElement('div');
+        hdr.textContent = item.label;
+        hdr.style.cssText = 'font-size:14px;font-weight:700;color:var(--text);margin-top:8px;margin-bottom:4px;';
+        listWrap.appendChild(hdr);
+      } else {
+        var ex = item.ex;
+        var row = document.createElement('div');
+        row.dataset.name = ex.name;
+        row.dataset.eq = ex.eq;
+        row.dataset.note = ex.note || '';
+        row.style.cssText = 'background:var(--card2);border-radius:var(--radius-sm,8px);border:1px solid var(--border);padding:12px;cursor:pointer;margin-bottom:6px;';
+
+        var nameEl = document.createElement('div');
+        nameEl.style.cssText = 'font-weight:600;font-size:14px;';
+        nameEl.textContent = ex.name;
+
+        var eqBadge = document.createElement('span');
+        eqBadge.textContent = eqNames[ex.eq] || ex.eq || '';
+        eqBadge.style.cssText = 'font-size:10px;background:var(--bg);padding:2px 6px;border-radius:4px;color:var(--text-sec);margin-left:8px;vertical-align:middle;';
+        nameEl.appendChild(eqBadge);
+
+        var isCustom = customDB[item.mg] && customDB[item.mg].some(function(c){ return c.name === ex.name; });
+        if (isCustom) {
+          var cb = document.createElement('span');
+          cb.textContent = 'Своё';
+          cb.style.cssText = 'font-size:10px;background:rgba(255,165,0,0.2);color:orange;padding:2px 6px;border-radius:4px;margin-left:4px;vertical-align:middle;';
+          nameEl.appendChild(cb);
+        }
+        row.appendChild(nameEl);
+
+        if (ex.note) {
+          var noteEl = document.createElement('div');
+          noteEl.textContent = ex.note;
+          noteEl.style.cssText = 'font-size:12px;color:var(--text-sec);margin-top:4px;';
+          row.appendChild(noteEl);
+        }
+        listWrap.appendChild(row);
+      }
+    });
+  }
+
+  // Event delegation for filter pills
+  document.getElementById('replace-filters').addEventListener('click', function(e) {
+    var pill = e.target.closest('[data-filter]');
+    if (!pill) return;
+    curFilter = pill.dataset.filter;
+    render();
   });
 
-  if (visibleCount === 0) html += '<div style="text-align:center;color:var(--text-sec);padding:20px;font-size:14px">Упражнений не найдено</div>';
-  listWrap.innerHTML = html;
-}
+  // Event delegation for exercise rows in list
+  document.getElementById('replace-list').addEventListener('click', function(e) {
+    var row = e.target.closest('[data-name]');
+    if (!row) return;
+    applyReplace(row.dataset.name, row.dataset.eq, row.dataset.note);
+  });
+
+  // Event delegation for .replace-ex-btn (set after renderExs builds the DOM)
+  document.getElementById('workout-screen').addEventListener('click', function(e) {
+    var btn = e.target.closest('.replace-ex-btn');
+    if (!btn) return;
+    window.openReplaceModal(parseInt(btn.dataset.ei, 10));
+  });
+
+  function applyReplace(exName, exEq, exNote) {
+    if (replaceExIndex === null || !AppState.curWorkout) return;
+    var oldEx = AppState.curWorkout.exs[replaceExIndex];
+
+    AppState.curWorkout.exs[replaceExIndex] = {
+      id: oldEx.id,
+      name: exName,
+      eq: exEq,
+      note: exNote,
+      nw: oldEx.nw,
+      ss: oldEx.ss,
+      sets: oldEx.sets
+    };
+
+    // Clear wState for this exercise
+    for (var si = 0; si < oldEx.sets.length; si++) {
+      delete AppState.wState[oldEx.id + '_' + si];
+    }
+
+    Storage.set('userPrograms', AppState.userPrograms);
+    saveWS();
+
+    document.getElementById('replace-ex-modal').classList.remove('show');
+    showToast('Упражнение заменено!');
+    renderExs();
+    updateFinBtn();
+  }
+})();
