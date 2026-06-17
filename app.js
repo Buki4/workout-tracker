@@ -387,57 +387,70 @@ const TEMPLATES = [
 // --- Exercise Database ---
 var DB = {
     chest: [
-      {name:"Отжимания от пола", eq:"bw", note:"Плавно, без рывков"},
-      {name:"Отжимания с широкой постановкой рук", eq:"bw", note:"Акцент на грудь"},
-      {name:"Жим штанги лежа", eq:"barbell", note:"Широким хватом"},
-      {name:"Жим гантелей лежа", eq:"dumbbells", note:"Глубоко опускаем гантели"},
-      {name:"Разводка гантелей", eq:"dumbbells", note:"Чувствуем растяжение"},
-      {name:"Отжимания на брусьях", eq:"dips", note:"С акцентом на грудь (наклон вперед)"},
-      {name:"Сведения рук с резиной", eq:"bands", note:"Изоляция на грудь"}
+      // COMPOUND first (multi-joint, primary movers)
+      {name:"Жим штанги лежа",                     eq:"barbell",  type:"compound", note:"Широким хватом"},
+      {name:"Жим гантелей лежа",                   eq:"dumbbells",type:"compound", note:"Глубоко опускаем гантели"},
+      {name:"Отжимания от пола",                   eq:"bw",       type:"compound", note:"Плавно, без рывков"},
+      {name:"Отжимания с широкой постановкой рук", eq:"bw",       type:"compound", note:"Акцент на грудь"},
+      {name:"Отжимания на брусьях",                eq:"dips",     type:"compound", note:"С акцентом на грудь (наклон вперед)"},
+      // ISOLATION (single-joint, finishing work)
+      {name:"Разводка гантелей",                   eq:"dumbbells",type:"isolation", note:"Чувствуем растяжение"},
+      {name:"Сведения рук с резиной",              eq:"bands",    type:"isolation", note:"Изоляция на грудь"}
     ],
     back: [
-      {name:"Лодочка (Супермен)", eq:"bw", note:"Задержка в верхней точке"},
-      {name:"Подтягивания", eq:"pullup", note:"Широким хватом"},
-      {name:"Тяга штанги в наклоне", eq:"barbell", note:"Спина прямая, тянем к поясу"},
-      {name:"Тяга гантелей в наклоне", eq:"dumbbells", note:"Локти идут вдоль корпуса"},
-      {name:"Тяга резины к поясу", eq:"bands", note:"Сводим лопатки"},
-      {name:"Пуловер с гантелей", eq:"dumbbells", note:"Растягиваем широчайшие"}
+      // COMPOUND first
+      {name:"Подтягивания",                        eq:"pullup",   type:"compound", note:"Широким хватом"},
+      {name:"Тяга штанги в наклоне",               eq:"barbell",  type:"compound", note:"Спина прямая, тянем к поясу"},
+      {name:"Тяга гантелей в наклоне",             eq:"dumbbells",type:"compound", note:"Локти идут вдоль корпуса"},
+      {name:"Тяга резины к поясу",                 eq:"bands",    type:"compound", note:"Сводим лопатки"},
+      {name:"Лодочка (Супермен)",                  eq:"bw",       type:"compound", note:"Задержка в верхней точке"},
+      // ISOLATION
+      {name:"Пуловер с гантелей",                  eq:"dumbbells",type:"isolation", note:"Растягиваем широчайшие"}
     ],
     legs: [
-      {name:"Приседания", eq:"bw", note:"Глубоко, колени по носкам"},
-      {name:"Выпады", eq:"bw", note:"Шаг назад"},
-      {name:"Ягодичный мост", eq:"bw", note:"Прожимаем ягодицы"},
-      {name:"Приседания со штангой", eq:"barbell", note:"Держим спину прямо"},
-      {name:"Румынская тяга", eq:"barbell", note:"На прямых ногах"},
-      {name:"Болгарские сплит-приседания", eq:"dumbbells", note:"Задняя нога на скамье/диване"},
-      {name:"Кубковые приседания", eq:"dumbbells", note:"Гантель перед грудью"},
-      {name:"Мертвая тяга с гантелями", eq:"dumbbells", note:"Чувствуем бицепс бедра"}
+      // COMPOUND first (largest muscles — always compound base)
+      {name:"Приседания со штангой",               eq:"barbell",  type:"compound", note:"Держим спину прямо"},
+      {name:"Приседания",                          eq:"bw",       type:"compound", note:"Глубоко, колени по носкам"},
+      {name:"Кубковые приседания",                 eq:"dumbbells",type:"compound", note:"Гантель перед грудью"},
+      {name:"Болгарские сплит-приседания",         eq:"dumbbells",type:"compound", note:"Задняя нога на скамье/диване"},
+      {name:"Румынская тяга",                      eq:"barbell",  type:"compound", note:"На прямых ногах"},
+      {name:"Мертвая тяга с гантелями",            eq:"dumbbells",type:"compound", note:"Чувствуем бицепс бедра"},
+      {name:"Выпады",                              eq:"bw",       type:"compound", note:"Шаг назад"},
+      {name:"Ягодичный мост",                      eq:"bw",       type:"isolation", note:"Прожимаем ягодицы"}
     ],
     shoulders: [
-      {name:"Отжимания домиком (Pike push-ups)", eq:"bw", note:"Акцент на дельты"},
-      {name:"Армейский жим", eq:"barbell", note:"Жим штанги стоя"},
-      {name:"Тяга штанги к подбородку", eq:"barbell", note:"Широким хватом"},
-      {name:"Жим гантелей сидя", eq:"dumbbells", note:"Без полного выпрямления локтей"},
-      {name:"Махи гантелями в стороны", eq:"dumbbells", note:"Мизинцы чуть выше больших пальцев"},
-      {name:"Махи гантелями в наклоне", eq:"dumbbells", note:"На заднюю дельту"},
-      {name:"Махи с резиной в стороны", eq:"bands", note:"Держим натяжение"}
+      // COMPOUND first (press movements)
+      {name:"Армейский жим",                       eq:"barbell",  type:"compound", note:"Жим штанги стоя"},
+      {name:"Жим гантелей сидя",                   eq:"dumbbells",type:"compound", note:"Без полного выпрямления локтей"},
+      {name:"Отжимания домиком (Pike push-ups)",   eq:"bw",       type:"compound", note:"Акцент на дельты"},
+      {name:"Тяга штанги к подбородку",            eq:"barbell",  type:"compound", note:"Широким хватом — задняя дельта"},
+      // ISOLATION (lateral raises — single-joint)
+      {name:"Махи гантелями в стороны",            eq:"dumbbells",type:"isolation", note:"Мизинцы чуть выше больших пальцев"},
+      {name:"Махи гантелями в наклоне",            eq:"dumbbells",type:"isolation", note:"На заднюю дельту"},
+      {name:"Махи с резиной в стороны",            eq:"bands",    type:"isolation", note:"Держим натяжение"}
     ],
     arms: [
-      {name:"Обратные отжимания", eq:"bw", note:"Акцент на трицепс (от дивана/стула)"},
-      {name:"Отжимания узким хватом", eq:"bw", note:"Локти вдоль корпуса"},
-      {name:"Подъем штанги на бицепс", eq:"barbell", note:"Без раскачки"},
-      {name:"Французский жим", eq:"barbell", note:"Локти зафиксированы"},
-      {name:"Сгибания рук с EZ-грифом", eq:"ez", note:"Комфортно для запястий"},
-      {name:"Сгибания рук на бицепс", eq:"dumbbells", note:"С супинацией"},
-      {name:"Молотки", eq:"dumbbells", note:"Хват параллельный"},
-      {name:"Разгибания рук с гантелью из-за головы", eq:"dumbbells", note:"На трицепс"}
+      // BICEPS compound (elbow flexion + some shoulder involvement)
+      {name:"Подъем штанги на бицепс",             eq:"barbell",  type:"compound", muscle:"biceps",  note:"Без раскачки"},
+      {name:"Сгибания рук с EZ-грифом",            eq:"ez",       type:"compound", muscle:"biceps",  note:"Комфортно для запястий"},
+      // TRICEPS compound (bodyweight — also engage chest/shoulders)
+      {name:"Обратные отжимания",                  eq:"bw",       type:"compound", muscle:"triceps", note:"Акцент на трицепс (от дивана/стула)"},
+      {name:"Отжимания узким хватом",              eq:"bw",       type:"compound", muscle:"triceps", note:"Локти вдоль корпуса"},
+      // BICEPS isolation
+      {name:"Сгибания рук на бицепс",              eq:"dumbbells",type:"isolation", muscle:"biceps",  note:"С супинацией"},
+      {name:"Молотки",                             eq:"dumbbells",type:"isolation", muscle:"biceps",  note:"Хват параллельный"},
+      // TRICEPS isolation
+      {name:"Французский жим",                     eq:"barbell",  type:"isolation", muscle:"triceps", note:"Локти зафиксированы"},
+      {name:"Разгибания рук с гантелью из-за головы", eq:"dumbbells",type:"isolation", muscle:"triceps", note:"На трицепс"}
     ],
     core: [
-      {name:"Скручивания", eq:"bw", note:"Не тянем шею руками"},
-      {name:"Планка", eq:"bw", note:"Держим поясницу ровно"},
-      {name:"Велосипед", eq:"bw", note:"Тянем локоть к колену"},
-      {name:"Подъем ног", eq:"bw", note:"Для нижнего пресса"},
-      {name:"Скручивания с роликом/колесом", eq:"rope", note:"Если есть колесо/ролик"}
+      // COMPOUND (multi-muscle trunk stability)
+      {name:"Планка",                              eq:"bw",       type:"compound", note:"Держим поясницу ровно"},
+      {name:"Велосипед",                           eq:"bw",       type:"compound", note:"Тянем локоть к колену"},
+      {name:"Скручивания с роликом/колесом",       eq:"rope",     type:"compound", note:"Если есть колесо/ролик"},
+      // ISOLATION
+      {name:"Скручивания",                         eq:"bw",       type:"isolation", note:"Не тянем шею руками"},
+      {name:"Подъем ног",                          eq:"bw",       type:"isolation", note:"Для нижнего пресса"}
     ]
   };
 
@@ -483,16 +496,22 @@ function saveAddEx() {
   }
 }
 
-AppState.userPrograms = Storage.get("AppState.userPrograms", []);
+// Load userPrograms — migrate from old "AppState." prefixed keys if needed
+AppState.userPrograms = Storage.get("userPrograms", null) ||
+  Storage.get("AppState.userPrograms", []);
 
 if (AppState.userPrograms.length === 0) {
   var defaultProg = JSON.parse(JSON.stringify(TEMPLATES.find(function(t){return t.id === "prog_default";})));
   defaultProg.instanceId = "prog_default_1";
   AppState.userPrograms.push(defaultProg);
-  Storage.set("AppState.userPrograms", AppState.userPrograms);
+  Storage.set("userPrograms", AppState.userPrograms);
+} else {
+  // Ensure data is under the canonical key
+  Storage.set("userPrograms", AppState.userPrograms);
 }
 
-AppState.activeProgId = Storage.getStr("AppState.activeProgId", null);
+AppState.activeProgId = Storage.getStr("activeProgId", null) ||
+  Storage.getStr("AppState.activeProgId", null);
 if (!AppState.activeProgId && AppState.userPrograms.length > 0) AppState.activeProgId = AppState.userPrograms[0].instanceId;
 
 AppState.P = AppState.userPrograms.find(function(p){return p.instanceId === AppState.activeProgId;}) || AppState.userPrograms[0];
@@ -827,22 +846,46 @@ function generateProgram() {
   }
 
 
-  // Helper to get exercise filtered by equipment
-  function getEx(group, idx) {
-    var validExs = [];
+  // Helper to get exercise filtered by equipment.
+  // Exercises are sorted: compound first, isolation last.
+  function getValidExs(group) {
+    var list;
     if (loc === 'home') {
-      validExs = DB[group].filter(function(ex) {
-        return ex.eq === 'bw' || eq.includes(ex.eq);
-      });
+      list = DB[group].filter(function(ex) { return ex.eq === 'bw' || eq.includes(ex.eq); });
     } else {
-      validExs = DB[group]; // in gym, assume all eq available
+      list = DB[group].slice();
     }
+    // Sort: compound before isolation (stable sort preserves relative order within each tier)
+    list.sort(function(a, b) {
+      var ta = a.type === 'compound' ? 0 : 1;
+      var tb = b.type === 'compound' ? 0 : 1;
+      return ta - tb;
+    });
+    return list;
+  }
 
+  function getEx(group, idx) {
+    var validExs = getValidExs(group);
     if (validExs.length === 0) {
-      // Fallback if absolutely no equipment matches (should rarely happen due to 'bw' fallbacks)
-      return {name: "Упражнение на " + group, note: "Собственный вес"};
+      return {name: "Упражнение на " + group, note: "Собственный вес", type:"compound"};
     }
     return Object.assign({}, validExs[idx % validExs.length]);
+  }
+
+  // Pick a specific biceps or triceps exercise by index within that sub-group
+  function getArmEx(muscle, idx) {
+    var list;
+    if (loc === 'home') {
+      list = DB.arms.filter(function(ex) {
+        return ex.muscle === muscle && (ex.eq === 'bw' || eq.includes(ex.eq));
+      });
+    } else {
+      list = DB.arms.filter(function(ex) { return ex.muscle === muscle; });
+    }
+    // Sort compound first
+    list.sort(function(a, b) { return (a.type === 'compound' ? 0 : 1) - (b.type === 'compound' ? 0 : 1); });
+    if (list.length === 0) return getEx('arms', idx); // fallback
+    return Object.assign({}, list[idx % list.length]);
   }
 
   // Helper: interleave two arrays [a1,a2] + [b1,b2] = [a1,b1,a2,b2]
@@ -863,7 +906,7 @@ function generateProgram() {
         id: "w"+(d+1), label: "Фулбоди "+(d+1), tag: String.fromCharCode(1040+d), sub: "Всё тело",
         warm: "Суставная гимнастика 5 мин", cool: "Растяжка 5 мин",
         // Принцип: крупные группы сначала, мелкие после; грудь/спина чередуются
-        exs: [ getEx('legs',d), getEx('chest',d), getEx('back',d), getEx('shoulders',d), getEx('arms',d*2), getEx('core',d) ]
+        exs: [ getEx('legs',d), getEx('chest',d), getEx('back',d), getEx('shoulders',d), getArmEx(d%2===0?'triceps':'biceps',d), getEx('core',d) ]
       });
     }
   } else if (split === 'upper_lower') {
@@ -872,8 +915,8 @@ function generateProgram() {
         // Верх: чередуем грудь/спину, потом плечи, затем руки (трицепс перед бицепсом т.к. добавляем после жимов работы)
         var upperExs = interleave([getEx('chest',d), getEx('chest',d+2)], [getEx('back',d), getEx('back',d+2)]);
         upperExs.push(getEx('shoulders',d));
-        upperExs.push(getEx('arms',1));  // трицепс
-        upperExs.push(getEx('arms',0));  // бицепс
+        upperExs.push(getArmEx('triceps', d));  // трицепс после жимовой работы
+        upperExs.push(getArmEx('biceps', d));   // бицепс после тяговой работы
         upperExs.push(getEx('core',d));
         workouts.push({ id:"w"+(d+1), label:"Верх "+(d+1), tag:"В", sub:"Верхняя часть тела", warm:"Суставная гимнастика", cool:"Растяжка верха",
           exs: upperExs });
@@ -889,14 +932,14 @@ function generateProgram() {
       if (type==='Push') {
         // Жимовый день: чередуем грудь и плечи, потом трицепс
         var pushExs = interleave([getEx('chest',0), getEx('chest',1)], [getEx('shoulders',0), getEx('shoulders',1)]);
-        pushExs.push(getEx('arms',1));  // Французский жим (трицепс)
-        pushExs.push(getEx('arms',5));  // Разгибания из-за головы (трицепс)
+        pushExs.push(getArmEx('triceps', 0));  // трицепс compound (после жимов)
+        pushExs.push(getArmEx('triceps', 1));  // трицепс isolation (финиш)
         workouts.push({ id:"w"+(d+1), label:"Жимовой день", tag:"Ж", sub:"Грудь, Плечи, Трицепс", warm:"Разминка", cool:"Растяжка",
           exs: pushExs });
       } else if (type==='Pull') {
         // Тяговый день: спина сначала, задняя дельта, потом бицепс
         workouts.push({ id:"w"+(d+1), label:"Тяговый день", tag:"Т", sub:"Спина, Бицепс, Задняя дельта", warm:"Разминка", cool:"Растяжка",
-          exs: [ getEx('back',0), getEx('back',1), getEx('back',2), getEx('shoulders',2), getEx('arms',0), getEx('arms',3) ] });
+          exs: [ getEx('back',0), getEx('back',1), getEx('back',2), getEx('shoulders',2), getArmEx('biceps',0), getArmEx('biceps',1) ] });
       } else {
         workouts.push({ id:"w"+(d+1), label:"День ног", tag:"Н", sub:"Ноги и пресс", warm:"Разминка", cool:"Растяжка",
           exs: [ getEx('legs',0), getEx('legs',1), getEx('legs',2), getEx('legs',3), getEx('core',0), getEx('core',1) ] });
@@ -910,7 +953,7 @@ function generateProgram() {
       if(type==='Грудь') e = [getEx('chest',0), getEx('chest',1), getEx('chest',2), getEx('core',0)];
       if(type==='Спина') e = [getEx('back',0), getEx('back',1), getEx('back',2), getEx('core',1)];
       if(type==='Ноги') e = [getEx('legs',0), getEx('legs',1), getEx('legs',2), getEx('legs',3), getEx('legs',4)];
-      if(type==='Плечи/Руки') e = [getEx('shoulders',0), getEx('shoulders',1), getEx('arms',1), getEx('arms',0), getEx('arms',2)];
+      if(type==='Плечи/Руки') e = [getEx('shoulders',0), getEx('shoulders',1), getArmEx('triceps',0), getArmEx('biceps',0), getArmEx('biceps',1)];
       // Грудь/Спина: чередуем грудь-спина-грудь-спина
       if(type==='Грудь/Спина') e = interleave([getEx('chest',0), getEx('chest',1)], [getEx('back',0), getEx('back',1)]);
       if(type==='Ноги/Плечи') e = [getEx('legs',0), getEx('legs',1), getEx('shoulders',0), getEx('shoulders',1)];
