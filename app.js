@@ -21,13 +21,13 @@ var Storage = {
 };
 
 var AppState = {
-  AppState.userPrograms: [],
-  AppState.activeProgId: null,
+  userPrograms: [],
+  activeProgId: null,
   P: null,
-  AppState.curMonth: null,
-  AppState.curWorkout: null,
-  AppState.curWeek: null,
-  AppState.wState: {}
+  curMonth: null,
+  curWorkout: null,
+  curWeek: null,
+  wState: {}
 };
 
 // ─────────────────────────────────────────
@@ -490,16 +490,16 @@ function saveAddEx() {
 
 
 
-AppState.userPrograms = Storage.get("AppState.userPrograms", []);
+AppState.userPrograms = Storage.get("userPrograms", []);
 
 if (AppState.userPrograms.length === 0) {
   var defaultProg = JSON.parse(JSON.stringify(TEMPLATES.find(function(t){return t.id === "prog_default";})));
   defaultProg.instanceId = "prog_default_1";
   AppState.userPrograms.push(defaultProg);
-  Storage.set("AppState.userPrograms", AppState.userPrograms);
+  Storage.set("userPrograms", AppState.userPrograms);
 }
 
-AppState.activeProgId = Storage.getStr("AppState.activeProgId", null);
+AppState.activeProgId = Storage.getStr("activeProgId", null);
 if (!AppState.activeProgId && AppState.userPrograms.length > 0) AppState.activeProgId = AppState.userPrograms[0].instanceId;
 
 AppState.P = AppState.userPrograms.find(function(p){return p.instanceId === AppState.activeProgId;}) || AppState.userPrograms[0];
@@ -773,11 +773,11 @@ function deleteProgram(e, id) {
   e.stopPropagation();
   if(!confirm("Удалить программу? История тренировок останется.")) return;
   AppState.userPrograms = AppState.userPrograms.filter(function(p){return p.instanceId !== id;});
-  localStorage.setItem("AppState.userPrograms", JSON.stringify(AppState.userPrograms));
+  localStorage.setItem("userPrograms", JSON.stringify(AppState.userPrograms));
   if(AppState.activeProgId === id) {
     if(AppState.userPrograms.length > 0) AppState.activeProgId = AppState.userPrograms[0].instanceId;
     else AppState.activeProgId = null;
-    localStorage.setItem("AppState.activeProgId", AppState.activeProgId);
+    localStorage.setItem("activeProgId", AppState.activeProgId);
   }
   renderProgramsList();
 }
@@ -809,8 +809,8 @@ function renderProgramsList() {
 
 function openProgram(id) {
   AppState.activeProgId = id;
-  localStorage.setItem('AppState.activeProgId', id);
-  P = AppState.userPrograms.find(function(p){return p.instanceId===id;});
+  localStorage.setItem('activeProgId', id);
+  AppState.P = AppState.userPrograms.find(function(p){return p.instanceId===id;});
   navTo('program-screen');
 }
 
@@ -963,7 +963,7 @@ function generateProgram() {
   };
 
   AppState.userPrograms.push(newProg);
-  localStorage.setItem('AppState.userPrograms', JSON.stringify(AppState.userPrograms));
+  localStorage.setItem('userPrograms', JSON.stringify(AppState.userPrograms));
   
   document.getElementById('create-prog-modal').classList.remove('show');
   
