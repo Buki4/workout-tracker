@@ -1,4 +1,32 @@
 
+var Storage = {
+  get: function(key, def) {
+    try { var v = localStorage.getItem(key); return v ? JSON.parse(v) : def; } catch(e) { return def; }
+  },
+  set: function(key, val) {
+    try { localStorage.setItem(key, JSON.stringify(val)); } catch(e) {}
+  },
+  getStr: function(key, def) {
+    try { return localStorage.getItem(key) || def; } catch(e) { return def; }
+  },
+  setStr: function(key, val) {
+    try { localStorage.setItem(key, val); } catch(e) {}
+  },
+  remove: function(key) {
+    try { localStorage.removeItem(key); } catch(e) {}
+  }
+};
+
+var AppState = {
+  userPrograms: [],
+  activeProgId: null,
+  P: null,
+  curMonth: null,
+  curWorkout: null,
+  curWeek: null,
+  wState: {}
+};
+
 // ─────────────────────────────────────────
 // PROGRAM DATA
 // ─────────────────────────────────────────
@@ -359,64 +387,76 @@ const TEMPLATES = [
 // --- Exercise Database ---
 var DB = {
     chest: [
-      {name:"Отжимания от пола", eq:"bw", note:"Плавно, без рывков"},
-      {name:"Отжимания с широкой постановкой рук", eq:"bw", note:"Акцент на грудь"},
-      {name:"Жим штанги лежа", eq:"barbell", note:"Широким хватом"},
-      {name:"Жим гантелей лежа", eq:"dumbbells", note:"Глубоко опускаем гантели"},
-      {name:"Разводка гантелей", eq:"dumbbells", note:"Чувствуем растяжение"},
-      {name:"Отжимания на брусьях", eq:"dips", note:"С акцентом на грудь (наклон вперед)"},
-      {name:"Сведения рук с резиной", eq:"bands", note:"Изоляция на грудь"}
+      // COMPOUND first (multi-joint, primary movers)
+      {name:"Жим штанги лежа",                     eq:"barbell",  type:"compound", note:"Широким хватом"},
+      {name:"Жим гантелей лежа",                   eq:"dumbbells",type:"compound", note:"Глубоко опускаем гантели"},
+      {name:"Отжимания от пола",                   eq:"bw",       type:"compound", note:"Плавно, без рывков"},
+      {name:"Отжимания с широкой постановкой рук", eq:"bw",       type:"compound", note:"Акцент на грудь"},
+      {name:"Отжимания на брусьях",                eq:"dips",     type:"compound", note:"С акцентом на грудь (наклон вперед)"},
+      // ISOLATION (single-joint, finishing work)
+      {name:"Разводка гантелей",                   eq:"dumbbells",type:"isolation", note:"Чувствуем растяжение"},
+      {name:"Сведения рук с резиной",              eq:"bands",    type:"isolation", note:"Изоляция на грудь"}
     ],
     back: [
-      {name:"Лодочка (Супермен)", eq:"bw", note:"Задержка в верхней точке"},
-      {name:"Подтягивания", eq:"pullup", note:"Широким хватом"},
-      {name:"Тяга штанги в наклоне", eq:"barbell", note:"Спина прямая, тянем к поясу"},
-      {name:"Тяга гантелей в наклоне", eq:"dumbbells", note:"Локти идут вдоль корпуса"},
-      {name:"Тяга резины к поясу", eq:"bands", note:"Сводим лопатки"},
-      {name:"Пуловер с гантелей", eq:"dumbbells", note:"Растягиваем широчайшие"}
+      // COMPOUND first
+      {name:"Подтягивания",                        eq:"pullup",   type:"compound", note:"Широким хватом"},
+      {name:"Тяга штанги в наклоне",               eq:"barbell",  type:"compound", note:"Спина прямая, тянем к поясу"},
+      {name:"Тяга гантелей в наклоне",             eq:"dumbbells",type:"compound", note:"Локти идут вдоль корпуса"},
+      {name:"Тяга резины к поясу",                 eq:"bands",    type:"compound", note:"Сводим лопатки"},
+      {name:"Лодочка (Супермен)",                  eq:"bw",       type:"compound", note:"Задержка в верхней точке"},
+      // ISOLATION
+      {name:"Пуловер с гантелей",                  eq:"dumbbells",type:"isolation", note:"Растягиваем широчайшие"}
     ],
     legs: [
-      {name:"Приседания", eq:"bw", note:"Глубоко, колени по носкам"},
-      {name:"Выпады", eq:"bw", note:"Шаг назад"},
-      {name:"Ягодичный мост", eq:"bw", note:"Прожимаем ягодицы"},
-      {name:"Приседания со штангой", eq:"barbell", note:"Держим спину прямо"},
-      {name:"Румынская тяга", eq:"barbell", note:"На прямых ногах"},
-      {name:"Болгарские сплит-приседания", eq:"dumbbells", note:"Задняя нога на скамье/диване"},
-      {name:"Кубковые приседания", eq:"dumbbells", note:"Гантель перед грудью"},
-      {name:"Мертвая тяга с гантелями", eq:"dumbbells", note:"Чувствуем бицепс бедра"}
+      // COMPOUND first (largest muscles — always compound base)
+      {name:"Приседания со штангой",               eq:"barbell",  type:"compound", note:"Держим спину прямо"},
+      {name:"Приседания",                          eq:"bw",       type:"compound", note:"Глубоко, колени по носкам"},
+      {name:"Кубковые приседания",                 eq:"dumbbells",type:"compound", note:"Гантель перед грудью"},
+      {name:"Болгарские сплит-приседания",         eq:"dumbbells",type:"compound", note:"Задняя нога на скамье/диване"},
+      {name:"Румынская тяга",                      eq:"barbell",  type:"compound", note:"На прямых ногах"},
+      {name:"Мертвая тяга с гантелями",            eq:"dumbbells",type:"compound", note:"Чувствуем бицепс бедра"},
+      {name:"Выпады",                              eq:"bw",       type:"compound", note:"Шаг назад"},
+      {name:"Ягодичный мост",                      eq:"bw",       type:"isolation", note:"Прожимаем ягодицы"}
     ],
     shoulders: [
-      {name:"Отжимания домиком (Pike push-ups)", eq:"bw", note:"Акцент на дельты"},
-      {name:"Армейский жим", eq:"barbell", note:"Жим штанги стоя"},
-      {name:"Тяга штанги к подбородку", eq:"barbell", note:"Широким хватом"},
-      {name:"Жим гантелей сидя", eq:"dumbbells", note:"Без полного выпрямления локтей"},
-      {name:"Махи гантелями в стороны", eq:"dumbbells", note:"Мизинцы чуть выше больших пальцев"},
-      {name:"Махи гантелями в наклоне", eq:"dumbbells", note:"На заднюю дельту"},
-      {name:"Махи с резиной в стороны", eq:"bands", note:"Держим натяжение"}
+      // COMPOUND first (press movements)
+      {name:"Армейский жим",                       eq:"barbell",  type:"compound", note:"Жим штанги стоя"},
+      {name:"Жим гантелей сидя",                   eq:"dumbbells",type:"compound", note:"Без полного выпрямления локтей"},
+      {name:"Отжимания домиком (Pike push-ups)",   eq:"bw",       type:"compound", note:"Акцент на дельты"},
+      {name:"Тяга штанги к подбородку",            eq:"barbell",  type:"compound", note:"Широким хватом — задняя дельта"},
+      // ISOLATION (lateral raises — single-joint)
+      {name:"Махи гантелями в стороны",            eq:"dumbbells",type:"isolation", note:"Мизинцы чуть выше больших пальцев"},
+      {name:"Махи гантелями в наклоне",            eq:"dumbbells",type:"isolation", note:"На заднюю дельту"},
+      {name:"Махи с резиной в стороны",            eq:"bands",    type:"isolation", note:"Держим натяжение"}
     ],
     arms: [
-      {name:"Обратные отжимания", eq:"bw", note:"Акцент на трицепс (от дивана/стула)"},
-      {name:"Отжимания узким хватом", eq:"bw", note:"Локти вдоль корпуса"},
-      {name:"Подъем штанги на бицепс", eq:"barbell", note:"Без раскачки"},
-      {name:"Французский жим", eq:"barbell", note:"Локти зафиксированы"},
-      {name:"Сгибания рук с EZ-грифом", eq:"ez", note:"Комфортно для запястий"},
-      {name:"Сгибания рук на бицепс", eq:"dumbbells", note:"С супинацией"},
-      {name:"Молотки", eq:"dumbbells", note:"Хват параллельный"},
-      {name:"Разгибания рук с гантелью из-за головы", eq:"dumbbells", note:"На трицепс"}
+      // BICEPS compound (elbow flexion + some shoulder involvement)
+      {name:"Подъем штанги на бицепс",             eq:"barbell",  type:"compound", muscle:"biceps",  note:"Без раскачки"},
+      {name:"Сгибания рук с EZ-грифом",            eq:"ez",       type:"compound", muscle:"biceps",  note:"Комфортно для запястий"},
+      // TRICEPS compound (bodyweight — also engage chest/shoulders)
+      {name:"Обратные отжимания",                  eq:"bw",       type:"compound", muscle:"triceps", note:"Акцент на трицепс (от дивана/стула)"},
+      {name:"Отжимания узким хватом",              eq:"bw",       type:"compound", muscle:"triceps", note:"Локти вдоль корпуса"},
+      // BICEPS isolation
+      {name:"Сгибания рук на бицепс",              eq:"dumbbells",type:"isolation", muscle:"biceps",  note:"С супинацией"},
+      {name:"Молотки",                             eq:"dumbbells",type:"isolation", muscle:"biceps",  note:"Хват параллельный"},
+      // TRICEPS isolation
+      {name:"Французский жим",                     eq:"barbell",  type:"isolation", muscle:"triceps", note:"Локти зафиксированы"},
+      {name:"Разгибания рук с гантелью из-за головы", eq:"dumbbells",type:"isolation", muscle:"triceps", note:"На трицепс"}
     ],
     core: [
-      {name:"Скручивания", eq:"bw", note:"Не тянем шею руками"},
-      {name:"Планка", eq:"bw", note:"Держим поясницу ровно"},
-      {name:"Велосипед", eq:"bw", note:"Тянем локоть к колену"},
-      {name:"Подъем ног", eq:"bw", note:"Для нижнего пресса"},
-      {name:"Скручивания с роликом/колесом", eq:"rope", note:"Если есть колесо/ролик"}
+      // COMPOUND (multi-muscle trunk stability)
+      {name:"Планка",                              eq:"bw",       type:"compound", note:"Держим поясницу ровно"},
+      {name:"Велосипед",                           eq:"bw",       type:"compound", note:"Тянем локоть к колену"},
+      {name:"Скручивания с роликом/колесом",       eq:"rope",     type:"compound", note:"Если есть колесо/ролик"},
+      // ISOLATION
+      {name:"Скручивания",                         eq:"bw",       type:"isolation", note:"Не тянем шею руками"},
+      {name:"Подъем ног",                          eq:"bw",       type:"isolation", note:"Для нижнего пресса"}
     ]
   };
 
 
 // --- Custom DB Logic ---
-var customDB = {chest:[], back:[], legs:[], shoulders:[], arms:[], core:[]};
-try { var saved = JSON.parse(localStorage.getItem('customDB')); if (saved) customDB = saved; } catch(e){}
+const customDB = Storage.get('customDB', {chest:[], back:[], legs:[], shoulders:[], arms:[], core:[]});
 Object.keys(customDB).forEach(function(mg) {
   if (DB[mg]) {
     DB[mg] = DB[mg].concat(customDB[mg]);
@@ -444,7 +484,7 @@ function saveAddEx() {
   
   if (!customDB[mg]) customDB[mg] = [];
   customDB[mg].push(newEx);
-  try { localStorage.setItem('customDB', JSON.stringify(customDB)); } catch(e){}
+  Storage.set('customDB', customDB);
   
   if (DB[mg]) DB[mg].push(newEx);
   
@@ -456,29 +496,25 @@ function saveAddEx() {
   }
 }
 
+// Load userPrograms — migrate from old "AppState." prefixed keys if needed
+AppState.userPrograms = Storage.get("userPrograms", null) ||
+  Storage.get("AppState.userPrograms", []);
 
-
-
-var userPrograms = [];
-try { userPrograms = JSON.parse(localStorage.getItem("userPrograms")) || []; } catch(e){}
-
-if (userPrograms.length === 0) {
+if (AppState.userPrograms.length === 0) {
   var defaultProg = JSON.parse(JSON.stringify(TEMPLATES.find(function(t){return t.id === "prog_default";})));
   defaultProg.instanceId = "prog_default_1";
-  userPrograms.push(defaultProg);
-  localStorage.setItem("userPrograms", JSON.stringify(userPrograms));
+  AppState.userPrograms.push(defaultProg);
+  Storage.set("userPrograms", AppState.userPrograms);
+} else {
+  // Ensure data is under the canonical key
+  Storage.set("userPrograms", AppState.userPrograms);
 }
 
-var activeProgId = localStorage.getItem("activeProgId");
-if (!activeProgId && userPrograms.length > 0) activeProgId = userPrograms[0].instanceId;
+AppState.activeProgId = Storage.getStr("activeProgId", null) ||
+  Storage.getStr("AppState.activeProgId", null);
+if (!AppState.activeProgId && AppState.userPrograms.length > 0) AppState.activeProgId = AppState.userPrograms[0].instanceId;
 
-var P = userPrograms.find(function(p){return p.instanceId === activeProgId;}) || userPrograms[0];
-
-
-// ─────────────────────────────────────────
-// STATE
-// ─────────────────────────────────────────
-var curMonth = null, curWorkout = null, curWeek = null, wState = {};
+AppState.P = AppState.userPrograms.find(function(p){return p.instanceId === AppState.activeProgId;}) || AppState.userPrograms[0];
 var tInterval = null, tSecs = 0, tRunning = false;
 var wakeLock = null;
 async function reqWL() { if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {} } }
@@ -610,7 +646,7 @@ function toggleSetTimer(k, minS, maxS, origTxt, exId, si) {
       txtEl.textContent = origTxt;
       playSound('tada');
       if('vibrate' in navigator) navigator.vibrate([200,100,200]);
-      if(!wState[k] || !wState[k].done) togD(exId, si, 'ok');
+      if(!AppState.wState[k] || !AppState.wState[k].done) togD(exId, si, 'ok');
     }
   }, 1000);
   
@@ -622,7 +658,7 @@ function updRest() {
   if(rv) rv.textContent = m+':'+(s<10?'0':'')+s;
 }
 function onNotesInput(v) {
-  wState.notes = v;
+  AppState.wState.notes = v;
   saveWS();
 }
 
@@ -630,19 +666,19 @@ function onNotesInput(v) {
 // STORAGE
 // ─────────────────────────────────────────
 function getWsKey(id) {
-  if (P.instanceId === 'prog_default_1') return 'ws_' + id;
-  return 'ws_' + P.instanceId + '_' + id;
+  if (AppState.P.instanceId === 'prog_default_1') return 'ws_' + id;
+  return 'ws_' + AppState.P.instanceId + '_' + id;
 }
 
 function saveWS() {
-  if (!curWorkout || !curWeek) return;
-  try { localStorage.setItem(getWsKey(curWorkout.id+'_w'+curWeek), JSON.stringify(wState)); } catch(e){}
+  if (!AppState.curWorkout || !AppState.curWeek) return;
+  Storage.set(getWsKey(AppState.curWorkout.id+'_w'+AppState.curWeek), AppState.wState);
 }
 function loadWS(id) {
-  try { var r=localStorage.getItem(getWsKey(id)); return r?JSON.parse(r):{}; } catch(e){ return {}; }
+  return Storage.get(getWsKey(id), {});
 }
 function getWeights() {
-  try { var r=localStorage.getItem('uw'); return r?JSON.parse(r):{}; } catch(e){ return {}; }
+  return Storage.get('uw', {});
 }
 function saveUW(exName, si, weight, diff, reps) {
   try {
@@ -661,20 +697,18 @@ function saveUW(exName, si, weight, diff, reps) {
     if (reps !== undefined) obj.r = reps;
     arr[si] = obj;
     w[exName] = arr;
-    localStorage.setItem('uw', JSON.stringify(w));
+    Storage.set('uw', w);
   } catch(e){}
 }
 function getHistory() {
-  try { var r=localStorage.getItem('wh'); return r?JSON.parse(r):[]; } catch(e){ return []; }
+  return Storage.get('wh', []);
 }
 function saveHistory(e) {
-  try {
-    var h=getHistory(); h.unshift(e);
-    localStorage.setItem('wh', JSON.stringify(h.slice(0,100)));
-  } catch(ex){}
+  var h=getHistory(); h.unshift(e);
+  Storage.set('wh', h.slice(0,100));
 }
 function getProgress(monthId) {
-  var m=P.months.find(function(x){return x.id===monthId;});
+  var m=AppState.P.months.find(function(x){return x.id===monthId;});
   if(!m) return 0;
   var weeksArr=m.weeks.split('–');
   var startW=parseInt(weeksArr[0])||1, endW=parseInt(weeksArr[1])||4;
@@ -736,9 +770,9 @@ function getProgramProgress(p) {
         tot++;
         var isDon = false;
         if (p.instanceId === "prog_default_1") {
-          isDon = localStorage.getItem("finished_"+w.id+"_w"+wk) === "true";
+          isDon = Storage.getStr("finished_"+w.id+"_w"+wk) === "true";
         } else {
-          isDon = localStorage.getItem("finished_"+p.instanceId+"_"+w.id+"_w"+wk) === "true";
+          isDon = Storage.getStr("finished_"+p.instanceId+"_"+w.id+"_w"+wk) === "true";
         }
         if (isDon) don++;
       }
@@ -750,12 +784,12 @@ function getProgramProgress(p) {
 function deleteProgram(e, id) {
   e.stopPropagation();
   if(!confirm("Удалить программу? История тренировок останется.")) return;
-  userPrograms = userPrograms.filter(function(p){return p.instanceId !== id;});
-  localStorage.setItem("userPrograms", JSON.stringify(userPrograms));
-  if(activeProgId === id) {
-    if(userPrograms.length > 0) activeProgId = userPrograms[0].instanceId;
-    else activeProgId = null;
-    localStorage.setItem("activeProgId", activeProgId);
+  AppState.userPrograms = AppState.userPrograms.filter(function(p){return p.instanceId !== id;});
+  Storage.set("userPrograms", JSON.stringify(AppState.userPrograms));
+  if(AppState.activeProgId === id) {
+    if(AppState.userPrograms.length > 0) AppState.activeProgId = AppState.userPrograms[0].instanceId;
+    else AppState.activeProgId = null;
+    Storage.setStr("activeProgId", AppState.activeProgId);
   }
   renderProgramsList();
 }
@@ -763,8 +797,8 @@ function deleteProgram(e, id) {
 function renderProgramsList() {
   var html = '<button class="btn" style="width:100%;margin-bottom:15px;background:var(--accent);color:#fff;border:none;box-shadow:0 4px 15px rgba(108,99,255,0.3);" onclick="document.getElementById(\'create-prog-modal\').classList.add(\'show\')">✨ Создать программу</button>';
   
-  userPrograms.forEach(function(prog) {
-    var isActive = prog.instanceId === activeProgId;
+  AppState.userPrograms.forEach(function(prog) {
+    var isActive = prog.instanceId === AppState.activeProgId;
     var pct = getProgramProgress(prog);
     html += '<div style="background:var(--card);border-radius:var(--radius);padding:15px;border:1px solid '+(isActive?'var(--accent)':'var(--border)')+';cursor:pointer;margin-bottom:12px" onclick="openProgram(\''+prog.instanceId+'\')">' +
       '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:5px">' +
@@ -786,9 +820,9 @@ function renderProgramsList() {
 }
 
 function openProgram(id) {
-  activeProgId = id;
-  localStorage.setItem('activeProgId', id);
-  P = userPrograms.find(function(p){return p.instanceId===id;});
+  AppState.activeProgId = id;
+  Storage.setStr('activeProgId', id);
+  AppState.P = AppState.userPrograms.find(function(p){return p.instanceId===id;});
   navTo('program-screen');
 }
 
@@ -812,22 +846,56 @@ function generateProgram() {
   }
 
 
-  // Helper to get exercise filtered by equipment
-  function getEx(group, idx) {
-    var validExs = [];
+  // Helper to get exercise filtered by equipment.
+  // Exercises are sorted: compound first, isolation last.
+  function getValidExs(group) {
+    var list;
     if (loc === 'home') {
-      validExs = DB[group].filter(function(ex) {
-        return ex.eq === 'bw' || eq.includes(ex.eq);
-      });
+      list = DB[group].filter(function(ex) { return ex.eq === 'bw' || eq.includes(ex.eq); });
     } else {
-      validExs = DB[group]; // in gym, assume all eq available
+      list = DB[group].slice();
     }
+    // Sort: compound before isolation (stable sort preserves relative order within each tier)
+    list.sort(function(a, b) {
+      var ta = a.type === 'compound' ? 0 : 1;
+      var tb = b.type === 'compound' ? 0 : 1;
+      return ta - tb;
+    });
+    return list;
+  }
 
+  function getEx(group, idx) {
+    var validExs = getValidExs(group);
     if (validExs.length === 0) {
-      // Fallback if absolutely no equipment matches (should rarely happen due to 'bw' fallbacks)
-      return {name: "Упражнение на " + group, note: "Собственный вес"};
+      return {name: "Упражнение на " + group, note: "Собственный вес", type:"compound"};
     }
     return Object.assign({}, validExs[idx % validExs.length]);
+  }
+
+  // Pick a specific biceps or triceps exercise by index within that sub-group
+  function getArmEx(muscle, idx) {
+    var list;
+    if (loc === 'home') {
+      list = DB.arms.filter(function(ex) {
+        return ex.muscle === muscle && (ex.eq === 'bw' || eq.includes(ex.eq));
+      });
+    } else {
+      list = DB.arms.filter(function(ex) { return ex.muscle === muscle; });
+    }
+    // Sort compound first
+    list.sort(function(a, b) { return (a.type === 'compound' ? 0 : 1) - (b.type === 'compound' ? 0 : 1); });
+    if (list.length === 0) return getEx('arms', idx); // fallback
+    return Object.assign({}, list[idx % list.length]);
+  }
+
+  // Helper: interleave two arrays [a1,a2] + [b1,b2] = [a1,b1,a2,b2]
+  function interleave(a, b) {
+    var res = [];
+    for (var i = 0; i < Math.max(a.length, b.length); i++) {
+      if (i < a.length) res.push(a[i]);
+      if (i < b.length) res.push(b[i]);
+    }
+    return res;
   }
 
   // Generate Workouts based on Split
@@ -837,14 +905,21 @@ function generateProgram() {
       workouts.push({
         id: "w"+(d+1), label: "Фулбоди "+(d+1), tag: String.fromCharCode(1040+d), sub: "Всё тело",
         warm: "Суставная гимнастика 5 мин", cool: "Растяжка 5 мин",
-        exs: [ getEx('legs',d), getEx('chest',d), getEx('back',d), getEx('shoulders',d), getEx('arms',d*2), getEx('core',d) ]
+        // Принцип: крупные группы сначала, мелкие после; грудь/спина чередуются
+        exs: [ getEx('legs',d), getEx('chest',d), getEx('back',d), getEx('shoulders',d), getArmEx(d%2===0?'triceps':'biceps',d), getEx('core',d) ]
       });
     }
   } else if (split === 'upper_lower') {
     for(var d=0; d<days; d++) {
       if(d%2===0) {
+        // Верх: чередуем грудь/спину, потом плечи, затем руки (трицепс перед бицепсом т.к. добавляем после жимов работы)
+        var upperExs = interleave([getEx('chest',d), getEx('chest',d+2)], [getEx('back',d), getEx('back',d+2)]);
+        upperExs.push(getEx('shoulders',d));
+        upperExs.push(getArmEx('triceps', d));  // трицепс после жимовой работы
+        upperExs.push(getArmEx('biceps', d));   // бицепс после тяговой работы
+        upperExs.push(getEx('core',d));
         workouts.push({ id:"w"+(d+1), label:"Верх "+(d+1), tag:"В", sub:"Верхняя часть тела", warm:"Суставная гимнастика", cool:"Растяжка верха",
-          exs: [ getEx('chest',d), getEx('back',d), getEx('shoulders',d), getEx('arms',d), getEx('arms',d+1), getEx('core',d) ] });
+          exs: upperExs });
       } else {
         workouts.push({ id:"w"+(d+1), label:"Низ "+(d+1), tag:"Н", sub:"Ноги и пресс", warm:"Суставная гимнастика", cool:"Растяжка ног",
           exs: [ getEx('legs',0), getEx('legs',1), getEx('legs',2), getEx('legs',3), getEx('legs',4), getEx('core',d) ] });
@@ -855,11 +930,16 @@ function generateProgram() {
     for(var d=0; d<days; d++) {
       var type = t[d%3];
       if (type==='Push') {
+        // Жимовый день: чередуем грудь и плечи, потом трицепс
+        var pushExs = interleave([getEx('chest',0), getEx('chest',1)], [getEx('shoulders',0), getEx('shoulders',1)]);
+        pushExs.push(getArmEx('triceps', 0));  // трицепс compound (после жимов)
+        pushExs.push(getArmEx('triceps', 1));  // трицепс isolation (финиш)
         workouts.push({ id:"w"+(d+1), label:"Жимовой день", tag:"Ж", sub:"Грудь, Плечи, Трицепс", warm:"Разминка", cool:"Растяжка",
-          exs: [ getEx('chest',0), getEx('chest',1), getEx('shoulders',0), getEx('shoulders',1), getEx('arms',2), getEx('arms',3) ] });
+          exs: pushExs });
       } else if (type==='Pull') {
+        // Тяговый день: спина сначала, задняя дельта, потом бицепс
         workouts.push({ id:"w"+(d+1), label:"Тяговый день", tag:"Т", sub:"Спина, Бицепс, Задняя дельта", warm:"Разминка", cool:"Растяжка",
-          exs: [ getEx('back',0), getEx('back',1), getEx('back',2), getEx('shoulders',2), getEx('arms',0), getEx('arms',1) ] });
+          exs: [ getEx('back',0), getEx('back',1), getEx('back',2), getEx('shoulders',2), getArmEx('biceps',0), getArmEx('biceps',1) ] });
       } else {
         workouts.push({ id:"w"+(d+1), label:"День ног", tag:"Н", sub:"Ноги и пресс", warm:"Разминка", cool:"Растяжка",
           exs: [ getEx('legs',0), getEx('legs',1), getEx('legs',2), getEx('legs',3), getEx('core',0), getEx('core',1) ] });
@@ -873,8 +953,9 @@ function generateProgram() {
       if(type==='Грудь') e = [getEx('chest',0), getEx('chest',1), getEx('chest',2), getEx('core',0)];
       if(type==='Спина') e = [getEx('back',0), getEx('back',1), getEx('back',2), getEx('core',1)];
       if(type==='Ноги') e = [getEx('legs',0), getEx('legs',1), getEx('legs',2), getEx('legs',3), getEx('legs',4)];
-      if(type==='Плечи/Руки') e = [getEx('shoulders',0), getEx('shoulders',1), getEx('arms',0), getEx('arms',2), getEx('arms',1)];
-      if(type==='Грудь/Спина') e = [getEx('chest',0), getEx('chest',1), getEx('back',0), getEx('back',1)];
+      if(type==='Плечи/Руки') e = [getEx('shoulders',0), getEx('shoulders',1), getArmEx('triceps',0), getArmEx('biceps',0), getArmEx('biceps',1)];
+      // Грудь/Спина: чередуем грудь-спина-грудь-спина
+      if(type==='Грудь/Спина') e = interleave([getEx('chest',0), getEx('chest',1)], [getEx('back',0), getEx('back',1)]);
       if(type==='Ноги/Плечи') e = [getEx('legs',0), getEx('legs',1), getEx('shoulders',0), getEx('shoulders',1)];
       workouts.push({ id:"w"+(d+1), label:type, tag:String.fromCharCode(1040+d), sub:"Бро-сплит", warm:"Разминка", cool:"Растяжка", exs: e });
     }
@@ -940,8 +1021,50 @@ function generateProgram() {
     months: months
   };
 
-  userPrograms.push(newProg);
-  localStorage.setItem('userPrograms', JSON.stringify(userPrograms));
+
+// --- Custom DB Logic ---
+var customDB = {chest:[], back:[], legs:[], shoulders:[], arms:[], core:[]};
+var saved = Storage.get('customDB', null); if (saved) customDB = saved;
+Object.keys(customDB).forEach(function(mg) {
+  if (DB[mg]) {
+    DB[mg] = DB[mg].concat(customDB[mg]);
+  }
+});
+
+function openAddExModal() {
+  document.getElementById('add-ex-name').value = '';
+  document.getElementById('add-ex-note').value = '';
+  document.getElementById('add-ex-modal').classList.add('show');
+}
+
+function saveAddEx() {
+  var name = document.getElementById('add-ex-name').value.trim();
+  var mg = document.getElementById('add-ex-mg').value;
+  var eq = document.getElementById('add-ex-eq').value;
+  var note = document.getElementById('add-ex-note').value.trim();
+
+  if (!name) {
+    showToast('Введите название!');
+    return;
+  }
+
+  var newEx = { name: name, eq: eq, note: note };
+  
+  if (!customDB[mg]) customDB[mg] = [];
+  customDB[mg].push(newEx);
+  Storage.set('customDB', customDB);
+  
+  if (DB[mg]) DB[mg].push(newEx);
+  
+  document.getElementById('add-ex-modal').classList.remove('show');
+  showToast('Упражнение добавлено!');
+  
+  if (document.getElementById('library-screen').classList.contains('active')) {
+    renderLibrary();
+  }
+}
+  AppState.userPrograms.push(newProg);
+  Storage.set('userPrograms', JSON.stringify(AppState.userPrograms));
   
   document.getElementById('create-prog-modal').classList.remove('show');
   
@@ -1005,7 +1128,7 @@ function renderLibrary() {
     }
   });
 
-  var html = '<button class="btn btn-primary" style="margin-bottom:15px;width:100%" onclick="openAddExModal()">+ Свое упражнение</button>';
+  var html = '';
   var uw = getWeights();
   var visibleCount = 0;
   
@@ -1051,7 +1174,7 @@ function renderLibrary() {
     });
   });
 
-  if (visibleCount === 0) html += '<div style="text-align:center;color:var(--text-sec);padding:20px;font-size:14px">Упражнений не найдено</div>';
+  if (!html) html = '<div style="text-align:center;color:var(--text-sec);padding:20px;font-size:14px">Упражнений не найдено</div>';
   itemsWrap.innerHTML = '<div style="color:var(--text3);font-size:12px;margin-bottom:-10px">Отображено упражнений: '+visibleCount+'</div>' + html;
 }
 
@@ -1082,27 +1205,47 @@ function importData(e) {
 function forceUpdate() {
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.getRegistrations().then(function(regs) {
-      if(regs.length===0) window.location.reload();
-      regs.forEach(function(r){ r.update(); });
+      if (regs.length === 0) { window.location.reload(); return; }
       showToast('Загружаем обновления...');
-      setTimeout(function(){ window.location.reload(); }, 2000);
+      // When controller changes (new SW takes over) — reload immediately
+      navigator.serviceWorker.addEventListener('controllerchange', function() {
+        window.location.reload();
+      });
+      regs.forEach(function(reg) {
+        reg.update().then(function() {
+          // If there's a waiting SW, tell it to skip waiting
+          if (reg.waiting) {
+            reg.waiting.postMessage({ type: 'SKIP_WAITING' });
+          } else if (reg.installing) {
+            // New SW still installing — wait for it to reach waiting state
+            reg.installing.addEventListener('statechange', function(e) {
+              if (e.target.state === 'installed') {
+                e.target.postMessage({ type: 'SKIP_WAITING' });
+              }
+            });
+          } else {
+            // No pending update at all — just reload
+            window.location.reload();
+          }
+        });
+      });
     });
   } else {
     window.location.reload();
   }
 }
 function goHome(){relWL();navTo('program-screen');}
-function goMonth(){relWL();stopTimer();renderMonth(curMonth);showScreen('month-screen');}
+function goMonth(){relWL();stopTimer();renderMonth(AppState.curMonth);showScreen('month-screen');}
 
 // ─────────────────────────────────────────
 // HOME
 // ─────────────────────────────────────────
 function renderProgram() {
-  document.getElementById('hs-title').innerText = P.name || (P.meta && P.meta.title) || 'Программа тренировок';
-  document.getElementById('hs-subtitle').innerText = (P.days ? P.days + ' тренировки в неделю' : (P.meta && P.meta.subtitle) || '');
+  document.getElementById('hs-title').innerText = AppState.P.name || (AppState.P.meta && AppState.P.meta.title) || 'Программа тренировок';
+  document.getElementById('hs-subtitle').innerText = (AppState.P.days ? AppState.P.days + ' тренировки в неделю' : (AppState.P.meta && AppState.P.meta.subtitle) || '');
   
   var html='';
-  P.months.forEach(function(m){
+  AppState.P.months.forEach(function(m){
     var pct=getProgress(m.id);
     html+='<div class="month-card" onclick="openMonth(\''+m.id+'\')">' +
       '<div class="mc-accent" style="background:linear-gradient(90deg,'+m.color+','+m.dark+')"></div>' +
@@ -1129,9 +1272,9 @@ function renderProgram() {
 // MONTH
 // ─────────────────────────────────────────
 function openMonth(mid) {
-  curMonth=P.months.find(function(m){return m.id===mid;});
-  if(!curMonth) return;
-  renderMonth(curMonth);
+  AppState.curMonth=AppState.P.months.find(function(m){return m.id===mid;});
+  if(!AppState.curMonth) return;
+  renderMonth(AppState.curMonth);
   showScreen('month-screen');
 }
 function renderMonth(m) {
@@ -1156,7 +1299,7 @@ function renderMonth(m) {
         prev+='<div class="ex-prev-item"><div class="ex-dot" style="background:'+m.color+'"></div><span>'+e.name+'</span></div>';
       });
       var more=w.exs.length-3;
-      var isFinished = ((P.instanceId === 'prog_default_1' ? localStorage.getItem('finished_'+w.id+'_w'+wk) : null) || localStorage.getItem('finished_'+P.instanceId+'_'+w.id+'_w'+wk)) === 'true';
+      var isFinished = ((AppState.P.instanceId === 'prog_default_1' ? Storage.getStr('finished_'+w.id+'_w'+wk) : null) || Storage.getStr('finished_'+AppState.P.instanceId+'_'+w.id+'_w'+wk)) === 'true';
       var btnText = isFinished ? '✓ Завершено' : (pct>0 ? '▶ Продолжить' : '▶ Начать');
       var btnStyle = isFinished ? 'background:var(--green)' : 'background:linear-gradient(135deg,'+m.color+','+m.dark+')';
 
@@ -1183,14 +1326,14 @@ function renderMonth(m) {
 // ─────────────────────────────────────────
 function openWorkout(wid, wk) {
   var m=null, w=null;
-  P.months.forEach(function(mo){mo.workouts.forEach(function(wo){if(wo.id===wid){m=mo;w=wo;}});});
+  AppState.P.months.forEach(function(mo){mo.workouts.forEach(function(wo){if(wo.id===wid){m=mo;w=wo;}});});
   if(!w) return;
-  curMonth=m; curWorkout=w; curWeek=wk; wState=loadWS(wid+'_w'+wk);
+  AppState.curMonth=m; AppState.curWorkout=w; AppState.curWeek=wk; AppState.wState=loadWS(wid+'_w'+wk);
   document.getElementById('ws-title').textContent=w.label;
   document.getElementById('ws-sub').textContent=m.title+' · Неделя '+wk;
   document.getElementById('warmup-text').textContent=w.warm;
   document.getElementById('cooldown-text').textContent=w.cool;
-  document.getElementById('workout-notes').value = wState.notes || '';
+  document.getElementById('workout-notes').value = AppState.wState.notes || '';
   timerReset();
   stopRest();
   renderExs();
@@ -1200,7 +1343,7 @@ function openWorkout(wid, wk) {
 }
 
 function renderExs() {
-  var m=curMonth, w=curWorkout;
+  var m=AppState.curMonth, w=AppState.curWorkout;
   var uw=getWeights();
   var html='';
   w.exs.forEach(function(ex,ei){
@@ -1233,7 +1376,7 @@ function renderExs() {
       else if(gw.d==='ok') markerHtml='<span style="color:#30d158;font-size:14px;margin-left:3px;margin-bottom:1px">✓</span>';
 
       var k=ex.id+'_'+si;
-      var st=wState[k]||{};
+      var st=AppState.wState[k]||{};
       var done=!!st.done;
       var diff=st.diff||'';
       
@@ -1284,7 +1427,10 @@ function renderExs() {
 
     html+='<div class="ex-block">' +
       '<div class="ex-hdr">' +
-        '<div class="ex-num">Упражнение '+(ei+1)+' из '+w.exs.length+'</div>' +
+        '<div style="display:flex;justify-content:space-between;align-items:center">' +
+          '<div class="ex-num">Упражнение '+(ei+1)+' из '+w.exs.length+'</div>' +
+          '<button class="replace-ex-btn" data-ei="'+ei+'" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;padding:8px 4px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;">🔄 Заменить</button>' +
+        '</div>' +
         '<div class="ex-name">'+ex.name+'</div>' +
         (ex.ss?'<div class="superset-tag">'+ex.ss+'</div>':'') +
         (ex.note?'<div class="ex-note">💡 '+ex.note+'</div>':'') +
@@ -1300,11 +1446,11 @@ function renderExs() {
 
 function togD(exId, exName, si, d) {
   var k=exId+'_'+si;
-  var st=wState[k]||{};
+  var st=AppState.wState[k]||{};
   var isSame = st.diff === d;
   var nd = !isSame;
   var newD = nd ? d : null;
-  wState[k]=Object.assign({},st,{done:nd, diff:newD});
+  AppState.wState[k]=Object.assign({},st,{done:nd, diff:newD});
   
   var row=document.getElementById('row_'+k);
   var rp=document.getElementById('rp_'+k);
@@ -1332,11 +1478,11 @@ function togD(exId, exName, si, d) {
 }
 
 function getMaxW() {
-  try { return JSON.parse(localStorage.getItem('max_w')) || {}; } catch(e){ return {}; }
+  return Storage.get('max_w', {});
 }
 function onWInp(k, exId, exName, si, v) {
-  var st=wState[k]||{};
-  wState[k]=Object.assign({},st,{weight:v});
+  var st=AppState.wState[k]||{};
+  AppState.wState[k]=Object.assign({},st,{weight:v});
   var inp=document.getElementById('inp_'+k);
   if(inp) {
     inp.classList.toggle('hv',!!v);
@@ -1348,22 +1494,22 @@ function onWInp(k, exId, exName, si, v) {
 }
 
 function onWChange(k, exId, exName, si, v) {
-  var st=wState[k]||{};
+  var st=AppState.wState[k]||{};
   if(v) {
     var rinp=document.getElementById('rinp_'+k);
     var rv = rinp ? rinp.value : undefined;
     saveUW(exName, si, v, st.diff, rv);
-    var ex = curWorkout.exs.find(function(e){return e.id===exId;});
+    var ex = AppState.curWorkout.exs.find(function(e){return e.id===exId;});
     if (ex) {
       for(var i=si+1; i<ex.sets.length; i++) {
         var nK = exId+'_'+i;
-        var nSt = wState[nK] || {};
+        var nSt = AppState.wState[nK] || {};
         if (!nSt.weight) {
            var nInp = document.getElementById('inp_'+nK);
            if (nInp && !nInp.value) {
               nInp.value = v;
               nInp.classList.add('hv');
-              wState[nK] = Object.assign({}, nSt, {weight: v});
+              AppState.wState[nK] = Object.assign({}, nSt, {weight: v});
               var nrinp = document.getElementById('rinp_'+nK);
               var nrv = nrinp ? nrinp.value : undefined;
               saveUW(exName, i, v, nSt.diff, nrv);
@@ -1376,30 +1522,30 @@ function onWChange(k, exId, exName, si, v) {
 }
 
 function onRInp(k, exId, exName, si, v) {
-  var st=wState[k]||{};
-  wState[k]=Object.assign({},st,{reps:v});
+  var st=AppState.wState[k]||{};
+  AppState.wState[k]=Object.assign({},st,{reps:v});
   var inp=document.getElementById('rinp_'+k);
   if(inp) inp.classList.toggle('hv',!!v);
   saveWS();
 }
 
 function onRChange(k, exId, exName, si, v) {
-  var st=wState[k]||{};
+  var st=AppState.wState[k]||{};
   if(v) {
     var winp=document.getElementById('inp_'+k);
     var wv = winp ? winp.value : undefined;
     saveUW(exName, si, wv, st.diff, v);
-    var ex = curWorkout.exs.find(function(e){return e.id===exId;});
+    var ex = AppState.curWorkout.exs.find(function(e){return e.id===exId;});
     if (ex) {
       for(var i=si+1; i<ex.sets.length; i++) {
         var nK = exId+'_'+i;
-        var nSt = wState[nK] || {};
+        var nSt = AppState.wState[nK] || {};
         if (!nSt.reps) {
            var nInp = document.getElementById('rinp_'+nK);
            if (nInp && !nInp.value) {
               nInp.value = v;
               nInp.classList.add('hv');
-              wState[nK] = Object.assign({}, nSt, {reps: v});
+              AppState.wState[nK] = Object.assign({}, nSt, {reps: v});
               var nwinp = document.getElementById('inp_'+nK);
               var nwv = nwinp ? nwinp.value : undefined;
               saveUW(exName, i, nwv, nSt.diff, v);
@@ -1416,9 +1562,9 @@ function scr(el) {
 }
 
 function updateFinBtn() {
-  var total=curWorkout.exs.reduce(function(s,e){return s+e.sets.length;},0);
+  var total=AppState.curWorkout.exs.reduce(function(s,e){return s+e.sets.length;},0);
   var done=0;
-  Object.keys(wState).forEach(function(k){if(wState[k].done) done++;});
+  Object.keys(AppState.wState).forEach(function(k){if(AppState.wState[k].done) done++;});
   var btn=document.getElementById('finish-btn');
   var allD = (done===total && total>0);
   btn.textContent=allD ? '🏆 Все подходы выполнены!' : 'Завершить тренировку ('+done+'/'+total+')';
@@ -1427,7 +1573,7 @@ function updateFinBtn() {
 
 function confirmReset() {
   if(confirm('Сбросить прогресс этой тренировки?')){
-    wState={};saveWS();timerReset();renderExs();updateFinBtn();showToast('Прогресс сброшен');
+    AppState.wState={};saveWS();timerReset();renderExs();updateFinBtn();showToast('Прогресс сброшен');
   }
 }
 
@@ -1464,26 +1610,26 @@ function finishWorkout() {
   timerPause();
   relWL();
   playSound('tada');
-  var total=curWorkout.exs.reduce(function(s,e){return s+e.sets.length;},0);
+  var total=AppState.curWorkout.exs.reduce(function(s,e){return s+e.sets.length;},0);
   var done=0;
-  Object.keys(wState).forEach(function(k){if(wState[k].done) done++;});
-  var doneExs=curWorkout.exs.filter(function(ex){
-    return ex.sets.every(function(s,si){var k=ex.id+'_'+si;return wState[k]&&wState[k].done;});
+  Object.keys(AppState.wState).forEach(function(k){if(AppState.wState[k].done) done++;});
+  var doneExs=AppState.curWorkout.exs.filter(function(ex){
+    return ex.sets.every(function(s,si){var k=ex.id+'_'+si;return AppState.wState[k]&&AppState.wState[k].done;});
   }).length;
   var m=Math.floor(tSecs/60), s=tSecs%60;
-  var totalTonnage = parseFloat(localStorage.getItem('tonnage')) || 0;
+  var totalTonnage = parseFloat(Storage.getStr('tonnage')) || 0;
   var mw = getMaxW();
   var newPRs = 0;
   var curTonnage = 0;
 
-  curWorkout.exs.forEach(function(ex) {
+  AppState.curWorkout.exs.forEach(function(ex) {
     var exMax = mw[ex.id] || 0;
     var hitPR = false;
     ex.sets.forEach(function(s, si) {
       var k = ex.id + '_' + si;
-      if (wState[k] && wState[k].done && wState[k].weight) {
-        var w = parseFloat(wState[k].weight) || 0;
-        var rStr = wState[k].reps || s.r || s;
+      if (AppState.wState[k] && AppState.wState[k].done && AppState.wState[k].weight) {
+        var w = parseFloat(AppState.wState[k].weight) || 0;
+        var rStr = AppState.wState[k].reps || s.r || s;
         var reps = parseInt(rStr) || 0;
         if(isNaN(curTonnage)) curTonnage = 0; // fallback if already NaN
         curTonnage += w * reps;
@@ -1494,8 +1640,8 @@ function finishWorkout() {
     if (exMax > (mw[ex.id] || 0)) mw[ex.id] = exMax;
   });
 
-  localStorage.setItem('max_w', JSON.stringify(mw));
-  localStorage.setItem('tonnage', totalTonnage + curTonnage);
+  Storage.set('max_w', mw);
+  Storage.setStr('tonnage', totalTonnage + curTonnage);
   updateGreeting();
 
   document.getElementById('c-sets').textContent=done;
@@ -1512,11 +1658,11 @@ function finishWorkout() {
     }
   }
 
-  document.getElementById('c-sub').textContent=curWorkout.label+' · Неделя '+curWeek;
-  localStorage.setItem('finished_'+P.instanceId+'_'+curWorkout.id+'_w'+curWeek, 'true');
-  saveHistory({wid:curWorkout.id+'_w'+curWeek,label:curWorkout.label+' (Неделя '+curWeek+')',month:curMonth.title,color:curMonth.color,date:new Date().toISOString(),done:done,total:total,mins:m,exs:doneExs,tonnage:curTonnage});
+  document.getElementById('c-sub').textContent=AppState.curWorkout.label+' · Неделя '+AppState.curWeek;
+  Storage.setStr('finished_'+AppState.P.instanceId+'_'+AppState.curWorkout.id+'_w'+AppState.curWeek, 'true');
+  saveHistory({wid:AppState.curWorkout.id+'_w'+AppState.curWeek,label:AppState.curWorkout.label+' (Неделя '+AppState.curWeek+')',month:AppState.curMonth.title,color:AppState.curMonth.color,date:new Date().toISOString(),done:done,total:total,mins:m,exs:doneExs,tonnage:curTonnage});
   var aiBtn = document.getElementById('c-ai-btn');
-  if(aiBtn) aiBtn.style.display = localStorage.getItem('gemini_key') ? 'block' : 'none';
+  if(aiBtn) aiBtn.style.display = Storage.getStr('gemini_key') ? 'block' : 'none';
   document.getElementById('c-overlay').classList.add('show');
 }
 function closeComplete(){document.getElementById('c-overlay').classList.remove('show');goMonth();}
@@ -1546,7 +1692,7 @@ function renderHistory() {
 }
 function clearHistory(){
   if(confirm('Очистить всю историю?')){
-    try{localStorage.removeItem('wh');}catch(e){}
+    Storage.remove('wh');
     renderHistory(); showToast('История очищена');
   }
 }
@@ -1591,11 +1737,11 @@ function updateGreeting() {
     totalTon += (x.tonnage || 0);
   });
   if(changed) {
-    localStorage.setItem('wh', JSON.stringify(h));
-    localStorage.setItem('tonnage', totalTon);
+    Storage.set('wh', h);
+    Storage.setStr('tonnage', totalTon);
   }
 
-  var nm = localStorage.getItem('profName') || '';
+  var nm = Storage.getStr('profName') || '';
   var el = document.getElementById('greet-title');
   if(el) el.textContent = nm ? 'Привет, ' + nm + '! 👋' : 'Программа тренировок';
   var pn = document.getElementById('prof-name');
@@ -1603,12 +1749,12 @@ function updateGreeting() {
   var tonEl = document.getElementById('prof-tonnage');
   var wEl = document.getElementById('prof-workouts');
   if(tonEl) {
-    var ton = parseFloat(localStorage.getItem('tonnage')) || 0;
+    var ton = parseFloat(Storage.getStr('tonnage')) || 0;
     tonEl.textContent = (ton/1000).toFixed(1);
   }
   if(wEl) wEl.textContent = h.length;
   var gkEl = document.getElementById('gemini-key');
-  if(gkEl && !gkEl.value) { var gk = localStorage.getItem('gemini_key'); if(gk) gkEl.value = gk; }
+  if(gkEl && !gkEl.value) { var gk = Storage.getStr('gemini_key'); if(gk) gkEl.value = gk; }
   var ch = document.getElementById('prof-chart');
   if(ch) {
     var chData = h.filter(function(x){return x.tonnage>0;}).slice(0,5).reverse();
@@ -1626,14 +1772,14 @@ function updateGreeting() {
 function setTheme(c1, c2) {
   document.documentElement.style.setProperty('--accent', c1);
   document.documentElement.style.setProperty('--accent2', c2);
-  localStorage.setItem('theme_c1', c1);
-  localStorage.setItem('theme_c2', c2);
+  Storage.setStr('theme_c1', c1);
+  Storage.setStr('theme_c2', c2);
 }
-var sc1=localStorage.getItem('theme_c1'), sc2=localStorage.getItem('theme_c2');
+var sc1=Storage.getStr('theme_c1'), sc2=Storage.getStr('theme_c2');
 if(sc1&&sc2){setTheme(sc1,sc2);}
 
 function saveApiKey(v) {
-  localStorage.setItem('gemini_key', v.trim());
+  Storage.setStr('gemini_key', v.trim());
 }
 function toggleKeyVisibility() {
   var inp = document.getElementById('gemini-key');
@@ -1643,7 +1789,7 @@ function toggleKeyVisibility() {
   eye.textContent = inp.type === 'password' ? '👁' : '🙈';
 }
 async function runAiAnalysis() {
-  var key = localStorage.getItem('gemini_key') || '';
+  var key = Storage.getStr('gemini_key') || '';
   if(!key) {
     showToast('Добавь Gemini API ключ в Профиле!');
     return;
@@ -1653,9 +1799,9 @@ async function runAiAnalysis() {
     showToast('Пока нет истории тренировок для анализа.');
     return;
   }
-  var totalTon = parseFloat(localStorage.getItem('tonnage')) || 0;
+  var totalTon = parseFloat(Storage.getStr('tonnage')) || 0;
   var mw = getMaxW();
-  var nm = localStorage.getItem('profName') || 'Атлет';
+  var nm = Storage.getStr('profName') || 'Атлет';
   var histStr = h.map(function(x, i) {
     return (i+1)+'. '+x.label+' ('+new Date(x.date).toLocaleDateString('ru')+') — '+
       x.done+'/'+x.total+' подходов, '+x.mins+' мин'+(x.tonnage?', тоннаж '+Math.round(x.tonnage)+'кг':'');
@@ -1697,7 +1843,7 @@ async function runAiAnalysis() {
   }
 }
 function saveName(v) {
-  localStorage.setItem('profName', v.trim());
+  Storage.setStr('profName', v.trim());
   updateGreeting();
 }
 updateGreeting();
@@ -1724,7 +1870,7 @@ async function checkForUpdates() {
         if (!res.ok) return;
         const data = await res.json();
         
-        const currentVersion = localStorage.getItem('appVersion') || '0.0.1';
+        const currentVersion = Storage.getStr('appVersion') || '0.0.1';
         
         const appVersionEl = document.getElementById('app-version');
         if(appVersionEl && data.version) {
@@ -1732,8 +1878,8 @@ async function checkForUpdates() {
         }
 
         if (data.version !== currentVersion) {
-            localStorage.setItem('pendingChangelog', data.changelog || '');
-            localStorage.setItem('pendingVersion', data.version);
+            Storage.setStr('pendingChangelog', data.changelog || '');
+            Storage.setStr('pendingVersion', data.version);
             const span = document.getElementById('newVersionSpan');
             if (span) span.textContent = 'v' + data.version;
             document.getElementById('updatePromptModal').classList.add('show');
@@ -1744,10 +1890,10 @@ async function checkForUpdates() {
 }
 
 function checkChangelog() {
-    const pendingChangelog = localStorage.getItem('pendingChangelog');
-    const pendingVersion = localStorage.getItem('pendingVersion');
+    const pendingChangelog = Storage.getStr('pendingChangelog');
+    const pendingVersion = Storage.getStr('pendingVersion');
     if (pendingChangelog && pendingVersion) {
-        localStorage.setItem('appVersion', pendingVersion);
+        Storage.setStr('appVersion', pendingVersion);
         
         const versionSpan = document.getElementById('changelogVersionSpan');
         if(versionSpan) versionSpan.textContent = 'v' + pendingVersion;
@@ -1757,10 +1903,10 @@ function checkChangelog() {
         
         document.getElementById('changelogModal').classList.add('show');
         
-        localStorage.removeItem('pendingChangelog');
-        localStorage.removeItem('pendingVersion');
-    } else if (!localStorage.getItem('appVersion')) {
-        localStorage.setItem('appVersion', '0.0.1');
+        Storage.remove('pendingChangelog');
+        Storage.remove('pendingVersion');
+    } else if (!Storage.getStr('appVersion')) {
+        Storage.setStr('appVersion', '0.0.1');
     }
 }
 
@@ -1831,7 +1977,182 @@ async function sendFeedback() {
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', function() {
     navigator.serviceWorker.register('./sw.js').then(function(reg) {
-      // SW registered
+
+      // Detect when a new SW is waiting (already downloaded, ready to activate)
+      function onUpdateFound() {
+        var newWorker = reg.installing;
+        if (!newWorker) return;
+        newWorker.addEventListener('statechange', function() {
+          if (newWorker.state === 'installed' && navigator.serviceWorker.controller) {
+            // New version ready — show update prompt if not already shown
+            if (!document.getElementById('updatePromptModal').classList.contains('show')) {
+              checkForUpdates();
+            }
+          }
+        });
+      }
+
+      reg.addEventListener('updatefound', onUpdateFound);
+
+      // Also listen for controller change to reload
+      var refreshing = false;
+      navigator.serviceWorker.addEventListener('controllerchange', function() {
+        if (!refreshing) { refreshing = true; window.location.reload(); }
+      });
+
     }).catch(function(){});
   });
 }
+
+
+// ─────────────────────────────────────────
+// REPLACE EXERCISE FEATURE
+// ─────────────────────────────────────────
+(function() {
+  var replaceExIndex = null;
+  var curFilter = 'Все';
+  var mgNames = {chest:'Грудь', back:'Спина', legs:'Ноги', shoulders:'Плечи', arms:'Руки', core:'Пресс'};
+  var eqNames = {bw:'Свой вес', barbell:'Штанга', dumbbells:'Гантели', pullup:'Турник', dips:'Брусья', bands:'Резинки', rope:'Канат', bench:'Скамья', vest:'Жилет', ez:'EZ-гриф'};
+
+  // Open modal — called from event delegation on .replace-ex-btn
+  window.openReplaceModal = function(ei) {
+    replaceExIndex = ei;
+
+    // Smart filter: detect muscle group of the exercise being replaced
+    curFilter = 'Все';
+    if (AppState.curWorkout && AppState.curWorkout.exs[ei]) {
+      var exName = AppState.curWorkout.exs[ei].name;
+      for (var mg in DB) {
+        if (DB[mg].some(function(ex) { return ex.name === exName; })) {
+          curFilter = mgNames[mg] || 'Все';
+          break;
+        }
+      }
+    }
+
+    document.getElementById('replace-ex-modal').classList.add('show');
+    render();
+  };
+
+  function render() {
+    var filtersWrap = document.getElementById('replace-filters');
+    var listWrap = document.getElementById('replace-list');
+
+    // Render filter pills
+    var fhtml = '';
+    ['Все'].concat(Object.values(mgNames)).forEach(function(f) {
+      var act = curFilter === f;
+      var pill = document.createElement('div');
+      pill.textContent = f;
+      pill.dataset.filter = f;
+      pill.style.cssText = 'padding:6px 14px;border-radius:20px;font-size:12px;font-weight:600;cursor:pointer;white-space:nowrap;transition:all 0.2s;border:1px solid ' + (act ? 'var(--accent)' : 'var(--border)') + ';background:' + (act ? 'var(--accent)' : 'var(--card2)') + ';color:' + (act ? '#fff' : 'var(--text2)') + ';-webkit-tap-highlight-color:transparent;';
+      fhtml += pill.outerHTML;
+    });
+    filtersWrap.innerHTML = fhtml;
+
+    // Render list
+    var items = [];
+    Object.keys(DB).forEach(function(mgKey) {
+      var mgTitle = mgNames[mgKey];
+      if (curFilter !== 'Все' && mgTitle !== curFilter) return;
+      items.push({type:'header', label: mgTitle});
+      DB[mgKey].forEach(function(ex) {
+        items.push({type:'ex', ex: ex, mg: mgKey});
+      });
+    });
+
+    listWrap.innerHTML = '';
+    items.forEach(function(item) {
+      if (item.type === 'header') {
+        var hdr = document.createElement('div');
+        hdr.textContent = item.label;
+        hdr.style.cssText = 'font-size:14px;font-weight:700;color:var(--text);margin-top:8px;margin-bottom:4px;';
+        listWrap.appendChild(hdr);
+      } else {
+        var ex = item.ex;
+        var row = document.createElement('div');
+        row.dataset.name = ex.name;
+        row.dataset.eq = ex.eq;
+        row.dataset.note = ex.note || '';
+        row.style.cssText = 'background:var(--card2);border-radius:var(--radius-sm,8px);border:1px solid var(--border);padding:12px;cursor:pointer;margin-bottom:6px;';
+
+        var nameEl = document.createElement('div');
+        nameEl.style.cssText = 'font-weight:600;font-size:14px;';
+        nameEl.textContent = ex.name;
+
+        var eqBadge = document.createElement('span');
+        eqBadge.textContent = eqNames[ex.eq] || ex.eq || '';
+        eqBadge.style.cssText = 'font-size:10px;background:var(--bg);padding:2px 6px;border-radius:4px;color:var(--text-sec);margin-left:8px;vertical-align:middle;';
+        nameEl.appendChild(eqBadge);
+
+        var isCustom = customDB[item.mg] && customDB[item.mg].some(function(c){ return c.name === ex.name; });
+        if (isCustom) {
+          var cb = document.createElement('span');
+          cb.textContent = 'Своё';
+          cb.style.cssText = 'font-size:10px;background:rgba(255,165,0,0.2);color:orange;padding:2px 6px;border-radius:4px;margin-left:4px;vertical-align:middle;';
+          nameEl.appendChild(cb);
+        }
+        row.appendChild(nameEl);
+
+        if (ex.note) {
+          var noteEl = document.createElement('div');
+          noteEl.textContent = ex.note;
+          noteEl.style.cssText = 'font-size:12px;color:var(--text-sec);margin-top:4px;';
+          row.appendChild(noteEl);
+        }
+        listWrap.appendChild(row);
+      }
+    });
+  }
+
+  // Event delegation for filter pills
+  document.getElementById('replace-filters').addEventListener('click', function(e) {
+    var pill = e.target.closest('[data-filter]');
+    if (!pill) return;
+    curFilter = pill.dataset.filter;
+    render();
+  });
+
+  // Event delegation for exercise rows in list
+  document.getElementById('replace-list').addEventListener('click', function(e) {
+    var row = e.target.closest('[data-name]');
+    if (!row) return;
+    applyReplace(row.dataset.name, row.dataset.eq, row.dataset.note);
+  });
+
+  // Event delegation for .replace-ex-btn — listen on document for reliability on iOS
+  document.addEventListener('click', function(e) {
+    var btn = e.target.closest('.replace-ex-btn');
+    if (!btn) return;
+    e.stopPropagation();
+    window.openReplaceModal(parseInt(btn.dataset.ei, 10));
+  });
+
+  function applyReplace(exName, exEq, exNote) {
+    if (replaceExIndex === null || !AppState.curWorkout) return;
+    var oldEx = AppState.curWorkout.exs[replaceExIndex];
+
+    AppState.curWorkout.exs[replaceExIndex] = {
+      id: oldEx.id,
+      name: exName,
+      eq: exEq,
+      note: exNote,
+      nw: oldEx.nw,
+      ss: oldEx.ss,
+      sets: oldEx.sets
+    };
+
+    // Clear wState for this exercise
+    for (var si = 0; si < oldEx.sets.length; si++) {
+      delete AppState.wState[oldEx.id + '_' + si];
+    }
+
+    Storage.set('userPrograms', AppState.userPrograms);
+    saveWS();
+
+    document.getElementById('replace-ex-modal').classList.remove('show');
+    showToast('Упражнение заменено!');
+    renderExs();
+    updateFinBtn();
+  }
+})();
