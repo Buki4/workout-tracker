@@ -497,8 +497,13 @@ function saveAddEx() {
 }
 
 // Load userPrograms — migrate from old "AppState." prefixed keys if needed
-AppState.userPrograms = Storage.get("userPrograms", null) ||
-  Storage.get("AppState.userPrograms", []);
+var up = Storage.get("userPrograms", null) || Storage.get("AppState.userPrograms", []);
+// Recovery from double-stringification bug
+while (typeof up === 'string') {
+  try { up = JSON.parse(up); } catch(e) { up = []; break; }
+}
+if (!Array.isArray(up)) up = [];
+AppState.userPrograms = up;
 
 if (AppState.userPrograms.length === 0) {
   var defaultProg = JSON.parse(JSON.stringify(TEMPLATES.find(function(t){return t.id === "prog_default";})));
@@ -785,7 +790,7 @@ function deleteProgram(e, id) {
   e.stopPropagation();
   if(!confirm("Удалить программу? История тренировок останется.")) return;
   AppState.userPrograms = AppState.userPrograms.filter(function(p){return p.instanceId !== id;});
-  Storage.set("userPrograms", JSON.stringify(AppState.userPrograms));
+  Storage.set("userPrograms", AppState.userPrograms);
   if(AppState.activeProgId === id) {
     if(AppState.userPrograms.length > 0) AppState.activeProgId = AppState.userPrograms[0].instanceId;
     else AppState.activeProgId = null;
@@ -1064,7 +1069,7 @@ function saveAddEx() {
   }
 }
   AppState.userPrograms.push(newProg);
-  Storage.set('userPrograms', JSON.stringify(AppState.userPrograms));
+  Storage.set('userPrograms', AppState.userPrograms);
   
   document.getElementById('create-prog-modal').classList.remove('show');
   
