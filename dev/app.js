@@ -496,12 +496,19 @@ function saveAddEx() {
   }
 }
 
-// Load userPrograms — migrate from old "AppState." prefixed keys if needed
-var up = Storage.get("userPrograms", null) || Storage.get("AppState.userPrograms", []);
-// Recovery from double-stringification bug
-while (typeof up === 'string') {
-  try { up = JSON.parse(up); } catch(e) { up = []; break; }
+// Load userPrograms — robust fallback and recovery
+var up = Storage.get("userPrograms", null);
+while (typeof up === 'string') { try { up = JSON.parse(up); } catch(e) { up = null; break; } }
+
+// If up is empty or invalid, try to recover from the old key
+if (!Array.isArray(up) || up.length === 0) {
+  var oldUp = Storage.get("AppState.userPrograms", []);
+  while (typeof oldUp === 'string') { try { oldUp = JSON.parse(oldUp); } catch(e) { oldUp = []; break; } }
+  if (Array.isArray(oldUp) && oldUp.length > 0) {
+    up = oldUp;
+  }
 }
+
 if (!Array.isArray(up)) up = [];
 AppState.userPrograms = up;
 
