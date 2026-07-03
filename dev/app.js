@@ -128,7 +128,7 @@ var EXERCISE_GUIDE = {
 
   // ──── LEGS ────
   'Кубковые приседания с гантелей': {
-    img: 'img/exercises/приседания-kubkovye.jpg',
+    img: 'img/exercises/prisedaniya-kubkovye.jpg',
     muscles: 'Квадрицепс, ягодицы, задняя амплитуда (бедро)',
     tips: [
       'Гантель у груди, локти прижаты к ней',
