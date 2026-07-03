@@ -17,6 +17,56 @@ var Storage = {
   }
 };
 
+// ─────────────────────────────────────────
+// EXERCISE GUIDE DATABASE
+// img: path to illustration, muscles: primary muscles, tips: key technique points
+// ─────────────────────────────────────────
+var EXERCISE_GUIDE = {
+  'Жим гантелей сидя': {
+    img: 'img/exercises/zhim-gantelyj-sidya.jpg',
+    muscles: 'Дельтовидные (передние и средние), трицепс, верхняя часть груди',
+    tips: [
+      'Сядьте прямо, спина прижата к спинке скамьи, стопы на полу',
+      'Возьмите гантели на уровне плеч, локти разведены в стороны под углом ~90°',
+      'Жмите вверх и немного вперед, не до полного выпрямления (оставляйте микросгиб)',
+      'Опускайте медленно (2–3 сек), контролируя вес — не бросайте вниз',
+      'Не прогибайтесь в пояснице и не тяните корпус вперед'
+    ]
+  }
+};
+
+function openExGuide(exName) {
+  var guide = EXERCISE_GUIDE[exName];
+  if (!guide) {
+    // No guide yet — show a placeholder message
+    document.getElementById('ex-guide-name').textContent = exName;
+    document.getElementById('ex-guide-img').style.display = 'none';
+    document.getElementById('ex-guide-muscles').textContent = '';
+    document.getElementById('ex-guide-tips').innerHTML = '<div style="text-align:center;padding:20px;color:var(--text2);font-size:14px">📋 Описание для этого упражнения скоро появится.</div>';
+    document.getElementById('ex-guide-modal').classList.add('show');
+    return;
+  }
+  document.getElementById('ex-guide-name').textContent = exName;
+  var img = document.getElementById('ex-guide-img');
+  if (guide.img) {
+    img.src = guide.img;
+    img.style.display = 'block';
+  } else {
+    img.style.display = 'none';
+  }
+  document.getElementById('ex-guide-muscles').textContent = guide.muscles || '';
+  document.getElementById('ex-guide-tips').innerHTML = (guide.tips || [])
+    .map(function(t, i) {
+      return '<div style="display:flex;gap:10px;align-items:flex-start;padding:6px 0;border-bottom:1px solid var(--border)">' +
+        '<span style="color:var(--accent);font-weight:700;min-width:20px;font-size:13px">' + (i+1) + '</span>' +
+        '<span style="font-size:13px;line-height:1.5;color:var(--text2)">' + t + '</span>' +
+        '</div>';
+    }).join('');
+  document.getElementById('ex-guide-modal').classList.add('show');
+}
+
+
+
 var AppState = {
   userPrograms: [],
   activeProgId: null,
@@ -1504,10 +1554,12 @@ function renderExs() {
       '<div class="ex-hdr">' +
         '<div style="display:flex;justify-content:space-between;align-items:center">' +
           '<div class="ex-num">Упражнение '+(ei+1)+' из '+w.exs.length+'</div>' +
-          '<div style="display:flex;gap:6px;align-items:center">' +
-            '<button onclick="openExHistory(\''+ex.name.replace(/'/g,"\\'")+'\')" style="background:none;border:none;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;padding:8px 4px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;">📊</button>' +
-            '<button class="replace-ex-btn" data-ei="'+ei+'" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;padding:8px 4px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;">🔄 Заменить</button>' +
+          '<div style="display:flex;gap:2px;align-items:center">' +
+            '<button onclick="openExGuide(\''+ex.name.replace(/'/g,"\\'")+'\')" title="\u0422\u0435\u0445\u043d\u0438\u043a\u0430" style="background:none;border:none;color:'+(EXERCISE_GUIDE[ex.name]?'var(--accent)':'var(--text3)')+';font-size:15px;cursor:pointer;padding:8px 6px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;">\ud83d\udca1</button>' +
+            '<button onclick="openExHistory(\''+ex.name.replace(/'/g,"\\'")+'\')" title="\u0418\u0441\u0442\u043e\u0440\u0438\u044f" style="background:none;border:none;color:var(--text3);font-size:15px;cursor:pointer;padding:8px 6px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;">\ud83d\udcca</button>' +
+            '<button class="replace-ex-btn" data-ei="'+ei+'" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;padding:8px 4px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;">\ud83d\udd04 \u0417\u0430\u043c\u0435\u043d\u0438\u0442\u044c</button>' +
           '</div>' +
+
         '</div>' +
         '<div class="ex-name">'+ex.name+'</div>' +
         (ex.ss?'<div class="superset-tag">'+ex.ss+'</div>':'') +
