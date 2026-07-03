@@ -496,12 +496,19 @@ function saveAddEx() {
   }
 }
 
-// Load userPrograms — migrate from old "AppState." prefixed keys if needed
-var up = Storage.get("userPrograms", null) || Storage.get("AppState.userPrograms", []);
-// Recovery from double-stringification bug
-while (typeof up === 'string') {
-  try { up = JSON.parse(up); } catch(e) { up = []; break; }
+// Load userPrograms — robust fallback and recovery
+var up = Storage.get("userPrograms", null);
+while (typeof up === 'string') { try { up = JSON.parse(up); } catch(e) { up = null; break; } }
+
+// If up is empty or invalid, try to recover from the old key
+if (!Array.isArray(up) || up.length === 0) {
+  var oldUp = Storage.get("AppState.userPrograms", []);
+  while (typeof oldUp === 'string') { try { oldUp = JSON.parse(oldUp); } catch(e) { oldUp = []; break; } }
+  if (Array.isArray(oldUp) && oldUp.length > 0) {
+    up = oldUp;
+  }
 }
+
 if (!Array.isArray(up)) up = [];
 AppState.userPrograms = up;
 
@@ -521,12 +528,26 @@ if (!AppState.activeProgId && AppState.userPrograms.length > 0) AppState.activeP
 
 AppState.P = AppState.userPrograms.find(function(p){return p.instanceId === AppState.activeProgId;}) || AppState.userPrograms[0];
 var tInterval = null, tSecs = 0, tRunning = false;
+var tStartTime = null; // wall-clock time when timer was started (for background-safe timing)
 var wakeLock = null;
 async function reqWL() { if ('wakeLock' in navigator) { try { wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {} } }
 function relWL() { if (wakeLock !== null) { wakeLock.release().then(function(){wakeLock=null;}); } }
 document.addEventListener('visibilitychange', function(){
-  if(wakeLock!==null && document.visibilityState==='visible') reqWL();
+  if (wakeLock !== null && document.visibilityState === 'visible') reqWL();
+  // Fix #4: recalculate elapsed time when returning from background
+  if (document.visibilityState === 'visible' && tRunning && tStartTime !== null) {
+    tSecs = Math.floor((Date.now() - tStartTime) / 1000);
+    updTimer();
+  }
 });
+// Fix #2: autosave workout state on any page hide (tab close, app switch, etc.)
+document.addEventListener('pagehide', function(){
+  if (AppState.curWorkout) saveWS();
+});
+document.addEventListener('visibilitychange', function(){
+  if (document.visibilityState === 'hidden' && AppState.curWorkout) saveWS();
+});
+
 document.addEventListener('touchstart', function(e){
   var t = e.target.tagName;
   if(t !== 'INPUT' && t !== 'TEXTAREA' && t !== 'BUTTON' && !e.target.closest('.chk-wrap') && !e.target.closest('.diff-wrap')) {
@@ -705,6 +726,56 @@ function saveUW(exName, si, weight, diff, reps) {
     Storage.set('uw', w);
   } catch(e){}
 }
+
+// Fix #7: per-exercise weight history
+function getExHistory(exName) {
+  return Storage.get('exh_' + exName.replace(/[^a-zA-Z0-9Ѐ-ӿ]/g, '_'), []);
+}
+function saveExHistory(exName, sets) {
+  // Save a dated snapshot of all set data for this exercise
+  var entry = {
+    d: new Date().toISOString(),
+    sets: sets // [{w, r, diff}, ...]
+  };
+  var h = getExHistory(exName);
+  h.unshift(entry);
+  Storage.set('exh_' + exName.replace(/[^a-zA-Z0-9Ѐ-ӿ]/g, '_'), h.slice(0, 30));
+}
+function openExHistory(exName) {
+  document.getElementById('ex-hist-name').textContent = exName;
+  var h = getExHistory(exName);
+  var body = document.getElementById('ex-hist-body');
+  if (h.length === 0) {
+    body.innerHTML = '<div style="text-align:center;padding:30px;color:var(--text2);font-size:14px">📊 Нет данных ещё.<br>История появится после первой тренировки.</div>';
+  } else {
+    var diffIcon = {up:'↑', ok:'✓', down:'↓', '':'—'};
+    var diffColor = {up:'#0a84ff', ok:'#30d158', down:'#ff453a', '':'var(--text3)'};
+    body.innerHTML = h.map(function(e) {
+      var d = new Date(e.d);
+      var ds = d.toLocaleDateString('ru-RU', {day:'numeric', month:'short'});
+      var ts = d.toLocaleTimeString('ru-RU', {hour:'2-digit', minute:'2-digit'});
+      var setsHtml = (e.sets || []).map(function(s, i) {
+        var ic = diffIcon[s.d || ''] || '—';
+        var cl = diffColor[s.d || ''] || 'var(--text3)';
+        return '<div style="display:flex;align-items:center;gap:8px;font-size:13px;padding:3px 0">' +
+          '<span style="color:var(--text3);min-width:20px">' + (i+1) + '.</span>' +
+          '<span style="font-weight:600;color:var(--text)">' + (s.w ? s.w + ' кг' : '—') + '</span>' +
+          (s.r ? '<span style="color:var(--text2)">× ' + s.r + '</span>' : '') +
+          '<span style="color:' + cl + ';margin-left:auto;font-size:14px">' + ic + '</span>' +
+          '</div>';
+      }).join('');
+      return '<div style="background:var(--card);border-radius:10px;border:1px solid var(--border);padding:12px 14px">' +
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">' +
+          '<span style="font-size:13px;font-weight:700;color:var(--text)">' + ds + '</span>' +
+          '<span style="font-size:12px;color:var(--text3)">' + ts + '</span>' +
+        '</div>' +
+        setsHtml +
+        '</div>';
+    }).join('');
+  }
+  document.getElementById('ex-hist-modal').classList.add('show');
+}
+
 function getHistory() {
   return Storage.get('wh', []);
 }
@@ -773,18 +844,17 @@ function getProgramProgress(p) {
       var st=parseInt(wks[0]), en=wks.length>1?parseInt(wks[1]):st;
       for(var wk=st;wk<=en;wk++) {
         tot++;
-        var isDon = false;
-        if (p.instanceId === "prog_default_1") {
-          isDon = Storage.getStr("finished_"+w.id+"_w"+wk) === "true";
-        } else {
-          isDon = Storage.getStr("finished_"+p.instanceId+"_"+w.id+"_w"+wk) === "true";
-        }
+        // Fix #8: always use instanceId in the key (no special case for prog_default_1)
+        var isDon = Storage.getStr("finished_"+p.instanceId+"_"+w.id+"_w"+wk) === "true";
+        // Backwards-compat: also check old key format used before v0.5.4
+        if (!isDon) isDon = Storage.getStr("finished_"+w.id+"_w"+wk) === "true";
         if (isDon) don++;
       }
     });
   });
   return tot>0 ? Math.round((don/tot)*100) : 0;
 }
+
 
 function deleteProgram(e, id) {
   e.stopPropagation();
@@ -1434,7 +1504,10 @@ function renderExs() {
       '<div class="ex-hdr">' +
         '<div style="display:flex;justify-content:space-between;align-items:center">' +
           '<div class="ex-num">Упражнение '+(ei+1)+' из '+w.exs.length+'</div>' +
-          '<button class="replace-ex-btn" data-ei="'+ei+'" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;padding:8px 4px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;">🔄 Заменить</button>' +
+          '<div style="display:flex;gap:6px;align-items:center">' +
+            '<button onclick="openExHistory(\''+ex.name.replace(/'/g,"\\'")+'\')" style="background:none;border:none;color:var(--text3);font-size:12px;font-weight:600;cursor:pointer;padding:8px 4px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;">📊</button>' +
+            '<button class="replace-ex-btn" data-ei="'+ei+'" style="background:none;border:none;color:var(--accent);font-size:12px;font-weight:600;cursor:pointer;padding:8px 4px;-webkit-tap-highlight-color:transparent;touch-action:manipulation;user-select:none;">🔄 Заменить</button>' +
+          '</div>' +
         '</div>' +
         '<div class="ex-name">'+ex.name+'</div>' +
         (ex.ss?'<div class="superset-tag">'+ex.ss+'</div>':'') +
@@ -1445,6 +1518,7 @@ function renderExs() {
         '<div class="sets-hdr"><div class="ch">#</div><div style="text-align:center">Повторения</div><div class="ch">Вес</div><div style="text-align:center">↓ ✓ ↑</div></div>' +
         setsHtml +
       '</div></div>';
+
   });
   document.getElementById('exs-wrap').innerHTML=html;
 }
@@ -1583,30 +1657,38 @@ function confirmReset() {
 }
 
 // ─────────────────────────────────────────
-// TIMER
+// TIMER (background-safe via Date.now)
 // ─────────────────────────────────────────
 function timerStart() {
   if(tRunning) return;
-  tRunning=true;
-  tInterval=setInterval(function(){tSecs++;updTimer();},1000);
-  var btn=document.getElementById('tplay');
-  btn.textContent='⏸'; btn.className='tbtn pause';
-  document.getElementById('timer-val').className='timer-val running';
+  tRunning = true;
+  // Store the wall-clock time accounting for already-elapsed seconds
+  tStartTime = Date.now() - tSecs * 1000;
+  tInterval = setInterval(function(){
+    tSecs = Math.floor((Date.now() - tStartTime) / 1000);
+    updTimer();
+  }, 500); // poll every 500ms for smoother recovery
+  var btn = document.getElementById('tplay');
+  btn.textContent = '⏸'; btn.className = 'tbtn pause';
+  document.getElementById('timer-val').className = 'timer-val running';
 }
 function timerPause() {
   if(!tRunning) return;
-  tRunning=false; clearInterval(tInterval); tInterval=null;
-  var btn=document.getElementById('tplay');
-  btn.textContent='▶'; btn.className='tbtn play';
-  document.getElementById('timer-val').className='timer-val';
+  tRunning = false;
+  tSecs = Math.floor((Date.now() - tStartTime) / 1000);
+  clearInterval(tInterval); tInterval = null; tStartTime = null;
+  var btn = document.getElementById('tplay');
+  btn.textContent = '▶'; btn.className = 'tbtn play';
+  document.getElementById('timer-val').className = 'timer-val';
 }
-function timerToggle(){tRunning?timerPause():timerStart();}
-function timerReset(){timerPause();tSecs=0;updTimer();document.getElementById('rest-fill').style.width='0%';}
+function timerToggle(){tRunning ? timerPause() : timerStart();}
+function timerReset(){timerPause(); tSecs = 0; updTimer(); document.getElementById('rest-fill').style.width='0%';}
 function stopTimer(){timerPause();}
 function updTimer(){
-  var m=Math.floor(tSecs/60), s=tSecs%60;
-  document.getElementById('timer-val').textContent=(m<10?'0':'')+m+':'+(s<10?'0':'')+s;
+  var m = Math.floor(tSecs/60), s = tSecs%60;
+  document.getElementById('timer-val').textContent = (m<10?'0':'')+m+':'+(s<10?'0':'')+s;
 }
+
 
 // ─────────────────────────────────────────
 // FINISH
@@ -1665,6 +1747,15 @@ function finishWorkout() {
 
   document.getElementById('c-sub').textContent=AppState.curWorkout.label+' · Неделя '+AppState.curWeek;
   Storage.setStr('finished_'+AppState.P.instanceId+'_'+AppState.curWorkout.id+'_w'+AppState.curWeek, 'true');
+  // Fix #7: save per-exercise history snapshot on workout finish
+  AppState.curWorkout.exs.forEach(function(ex) {
+    var exSets = ex.sets.map(function(s, si) {
+      var k = ex.id + '_' + si;
+      var st = AppState.wState[k] || {};
+      return { w: st.weight || '', r: st.reps || '', d: st.diff || '' };
+    });
+    saveExHistory(ex.name, exSets);
+  });
   saveHistory({wid:AppState.curWorkout.id+'_w'+AppState.curWeek,label:AppState.curWorkout.label+' (Неделя '+AppState.curWeek+')',month:AppState.curMonth.title,color:AppState.curMonth.color,date:new Date().toISOString(),done:done,total:total,mins:m,exs:doneExs,tonnage:curTonnage});
   var aiBtn = document.getElementById('c-ai-btn');
   if(aiBtn) aiBtn.style.display = Storage.getStr('gemini_key') ? 'block' : 'none';
