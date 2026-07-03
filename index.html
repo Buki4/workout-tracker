@@ -410,6 +410,28 @@
   </div>
 </div>
 
+<!-- EXERCISE GUIDE MODAL -->
+<div id="ex-guide-modal" class="ai-modal">
+  <div class="ai-modal-content" style="max-width:460px;padding:0;overflow:hidden;">
+    <div style="padding:16px 18px;background:var(--card);border-bottom:1px solid var(--border);display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--accent);margin-bottom:2px">Техника выполнения</div>
+        <div id="ex-guide-name" style="font-size:16px;font-weight:700;"></div>
+      </div>
+      <button style="background:none;border:none;color:var(--text2);font-size:26px;cursor:pointer;line-height:1;padding:4px" onclick="document.getElementById('ex-guide-modal').classList.remove('show')">×</button>
+    </div>
+    <!-- Diagram image -->
+    <img id="ex-guide-img" src="" alt="Схема упражнения" style="width:100%;display:none;background:#fff;">
+    <!-- Muscles -->
+    <div style="padding:12px 18px 0;">
+      <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Мышцы</div>
+      <div id="ex-guide-muscles" style="font-size:13px;color:var(--text2);margin-bottom:12px"></div>
+      <div style="font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--text3);margin-bottom:4px">Ключевые моменты</div>
+      <div id="ex-guide-tips" style="padding-bottom:18px;"></div>
+    </div>
+  </div>
+</div>
+
 <script src="app.js"></script>
 </body>
 </html>
