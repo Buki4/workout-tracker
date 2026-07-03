@@ -2,7 +2,7 @@
 <html lang="ru">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, viewport-fit=cover">
+<meta name="viewport" content="width=device-width, initial-scale=1.05, maximum-scale=1.0, viewport-fit=cover">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="theme-color" content="#0d0d14">
@@ -55,7 +55,8 @@
 
 <!-- WORKOUT SCREEN -->
 <div id="workout-screen" class="screen">
-  <div class="workout-top">
+  <!-- Fix #3: sticky floating header so timer is always visible -->
+  <div class="workout-top" id="workout-top">
     <div class="workout-topbar">
       <div class="back-btn" onclick="goMonth()">←</div>
       <div class="tbi">
@@ -392,6 +393,20 @@
     </div>
     <div id="replace-filters" style="display:flex;gap:8px;overflow-x:auto;padding:15px;background:var(--card);border-bottom:1px solid var(--border);" class="no-scroll"></div>
     <div id="replace-list" style="padding:15px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:10px;"></div>
+  </div>
+</div>
+
+<!-- EXERCISE HISTORY MODAL (Fix #7) -->
+<div id="ex-hist-modal" class="ai-modal">
+  <div class="ai-modal-content" style="background:var(--bg);border-radius:var(--radius);border:1px solid var(--border);padding:0;width:100%;max-width:420px;max-height:80vh;display:flex;flex-direction:column;margin:auto;">
+    <div style="padding:18px 20px;background:var(--card);border-bottom:1px solid var(--border);border-radius:var(--radius) var(--radius) 0 0;display:flex;justify-content:space-between;align-items:center;">
+      <div>
+        <div style="font-size:17px;font-weight:700;">История упражнения</div>
+        <div id="ex-hist-name" style="font-size:13px;color:var(--text2);margin-top:2px;"></div>
+      </div>
+      <button style="background:none;border:none;color:var(--text2);font-size:24px;cursor:pointer;line-height:1" onclick="document.getElementById('ex-hist-modal').classList.remove('show')">×</button>
+    </div>
+    <div id="ex-hist-body" style="padding:15px;overflow-y:auto;flex:1;display:flex;flex-direction:column;gap:8px;"></div>
   </div>
 </div>
 
