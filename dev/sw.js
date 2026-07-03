@@ -1,4 +1,4 @@
-const CACHE = "workout-tracker-0.5.19";
+const CACHE = "workout-tracker-0.5.20";
 const APP_FILES = ['./', './index.html', './style.css', './app.js', './manifest.json'];
 
 // On install — cache core files and immediately activate (skipWaiting)
