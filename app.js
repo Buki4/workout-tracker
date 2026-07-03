@@ -194,6 +194,8 @@ var EXERCISE_GUIDE = {
       'Опускайте медленно (2–3 сек), контролируя вес — не бросайте вниз',
       'Не прогибайтесь в пояснице и не тяните корпус вперед'
     ]
+  }
+};
 // Add alias for names with clarifications in brackets
 EXERCISE_GUIDE['Жим гантелей сидя (плечи)'] = EXERCISE_GUIDE['Жим гантелей сидя'];
 
