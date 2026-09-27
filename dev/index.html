@@ -256,6 +256,9 @@
   <button class="nav-item active" id="nav-home" onclick="navTo('home')">
     <span class="nav-icon">🏠</span><span class="nav-label">Программа</span>
   </button>
+  <button class="nav-item" id="nav-challenges" onclick="navTo('challenges')">
+    <span class="nav-icon">🔥</span><span class="nav-label">Челлендж</span>
+  </button>
   <button class="nav-item" id="nav-lib" onclick="navTo('library')">
     <span class="nav-icon">📚</span><span class="nav-label">Библиотека</span>
   </button>
@@ -267,6 +270,82 @@
   </button>
 </nav>
 
+
+
+<!-- CHALLENGES SCREEN -->
+<div id="challenges-screen" class="screen">
+  <div class="top-bar">
+    <div class="tbi">
+      <div class="tbi-title">🔥 Челленджи</div>
+      <div class="tbi-sub">Ежедневные цели</div>
+    </div>
+  </div>
+  <div style="padding:16px 20px 100px;padding-top:100px" id="challenges-list"></div>
+</div>
+
+<!-- CHALLENGE DETAIL SCREEN -->
+<div id="challenge-detail-screen" class="screen">
+  <div class="top-bar">
+    <div class="back-btn" onclick="navTo('challenges')">←</div>
+    <div class="tbi">
+      <div class="tbi-title" id="cd-title"></div>
+      <div class="tbi-sub" id="cd-sub"></div>
+    </div>
+  </div>
+  <div style="padding:16px 20px 100px;padding-top:100px" id="cd-body"></div>
+</div>
+
+<!-- CHALLENGE DAY SCREEN -->
+<div id="challenge-day-screen" class="screen">
+  <div class="workout-top">
+    <div class="workout-topbar">
+      <div class="back-btn" onclick="saveChallengeDay()">←</div>
+      <div class="tbi">
+        <div class="tbi-title" id="cday-title"></div>
+        <div class="tbi-sub" id="cday-sub"></div>
+      </div>
+    </div>
+  </div>
+  <div id="cday-exs" style="padding:14px 20px;display:flex;flex-direction:column;gap:16px"></div>
+  <div style="padding:0 20px 100px;margin-top:8px">
+    <button onclick="saveChallengeDay()" style="width:100%;padding:15px;border-radius:var(--radius);background:var(--green);color:#fff;border:none;font-size:16px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent">✅ Сохранить и закрыть</button>
+  </div>
+</div>
+
+<!-- CREATE CHALLENGE MODAL -->
+<div id="create-challenge-modal" class="ai-modal">
+  <div class="ai-modal-content" style="max-width:460px;padding:0;overflow-y:auto;overscroll-behavior:contain;max-height:92vh;">
+    <div style="padding:18px 20px;background:var(--card);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:10;display:flex;justify-content:space-between;align-items:center">
+      <div style="font-size:18px;font-weight:800">Новый челлендж 🔥</div>
+      <button onclick="document.getElementById('create-challenge-modal').classList.remove('show')" style="background:none;border:none;color:var(--text2);font-size:24px;cursor:pointer;line-height:1">×</button>
+    </div>
+    <div style="padding:20px;display:flex;flex-direction:column;gap:16px">
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px">Название</div>
+        <input id="cc-name" type="text" placeholder="Челлендж 100 повторений" oninput="updateCcSummary()" style="width:100%;background:var(--card2);border:1.5px solid var(--border);border-radius:10px;padding:11px 14px;color:var(--text);font-size:15px;font-family:inherit;outline:none">
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Длительность</div>
+        <div style="display:flex;gap:8px" id="cc-days-btns">
+          <button onclick="setCcDays(7)" data-days="7" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:var(--card2);color:var(--text2);font-size:13px;font-weight:600;cursor:pointer">7 дней</button>
+          <button onclick="setCcDays(30)" data-days="30" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--accent);background:rgba(108,99,255,0.15);color:var(--accent);font-size:13px;font-weight:600;cursor:pointer">30 дней</button>
+          <button onclick="setCcDays(60)" data-days="60" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:var(--card2);color:var(--text2);font-size:13px;font-weight:600;cursor:pointer">60 дней</button>
+          <button onclick="setCcDays(90)" data-days="90" style="flex:1;padding:10px;border-radius:10px;border:1.5px solid var(--border);background:var(--card2);color:var(--text2);font-size:13px;font-weight:600;cursor:pointer">90 дней</button>
+        </div>
+        <input id="cc-days" type="hidden" value="30">
+      </div>
+      <div>
+        <div style="font-size:12px;font-weight:700;color:var(--text3);letter-spacing:.06em;text-transform:uppercase;margin-bottom:8px">Упражнения</div>
+        <div id="cc-exs"></div>
+        <button onclick="addCcEx()" style="width:100%;padding:10px;border-radius:10px;border:1.5px dashed var(--border);background:transparent;color:var(--text3);font-size:13px;font-weight:600;cursor:pointer;margin-top:4px">＋ Добавить упражнение</button>
+      </div>
+      <div style="background:var(--card2);border-radius:10px;padding:12px 14px;font-size:13px;color:var(--text2)">
+        <span style="font-size:16px">📊</span> Итого: <span id="cc-summary" style="font-weight:700;color:var(--text)">—</span>
+      </div>
+      <button onclick="saveChallengeCreate()" style="width:100%;padding:15px;border-radius:var(--radius);background:linear-gradient(135deg,var(--accent),#a78bfa);color:#fff;border:none;font-size:16px;font-weight:700;cursor:pointer">🔥 Начать челлендж</button>
+    </div>
+  </div>
+</div>
 
 
 <!-- CREATE PROGRAM MODAL -->
@@ -433,5 +512,6 @@
 </div>
 
 <script src="app.js"></script>
+<script src="challenges.js"></script>
 </body>
 </html>
