@@ -25,7 +25,7 @@ var EXERCISE_GUIDE = {
 
   // ──── CHEST ────
   'Жим штанги лёжа': {
-    // img: 'img/exercises/zhim-shtangi-lezha.jpg',
+    img: 'img/exercises/zhim-shtangi-lezha.jpg',
     muscles: 'Грудь (большая грудная), трицепс, передний дельтовидный',
     tips: [
       'Ложитесь на скамью, 5 точек контакта: затылок, лопатки, ягодицы, стопы на полу',
@@ -115,7 +115,7 @@ var EXERCISE_GUIDE = {
     ]
   },
   'Пулловер с одной гантелей лёжа поперёк скамьи': {
-    // img: 'img/exercises/pullover-ganteley.jpg',
+    img: 'img/exercises/pullover-ganteley.jpg',
     muscles: 'Широчайшая, грудь, длинная головка трицепса',
     tips: [
       'Лежите поперёк скамьи, шея на краю',
@@ -150,7 +150,7 @@ var EXERCISE_GUIDE = {
     ]
   },
   'Румынская тяга': {
-    // img: 'img/exercises/rumynskaya-tyaga.jpg',
+    img: 'img/exercises/rumynskaya-tyaga.jpg',
     muscles: 'Бицепс бедра, ягодицы, поясница',
     tips: [
       'Стойте прямо, ноги на ширине таза, колени чуть согнуты',
@@ -252,9 +252,32 @@ EXERCISE_GUIDE['Молотки'] = {
     'Отличное упражнение для толщины рук'
   ]
 };
+EXERCISE_GUIDE['Махи гантелями в стороны'] = {
+  img: 'img/exercises/mahi-gantelyami.jpg',
+  muscles: 'Средний пучок дельт (плечи)',
+  tips: [
+    'Стойте прямо, ноги на ширине плеч, пресс напряжён',
+    'Поднимайте гантели через стороны до уровня плеч',
+    'Мизинцы чуть выше больших пальцев, локти слегка согнуты',
+    'Не раскачивайте корпус и не забрасывайте вес'
+  ]
+};
+EXERCISE_GUIDE['Скручивания'] = {
+  img: 'img/exercises/skruchivaniya.jpg',
+  muscles: 'Прямая мышца живота (пресс)',
+  tips: [
+    'Лежите на спине, ноги согнуты, стопы на полу',
+    'Отрывайте только лопатки, поясница плотно прижата',
+    'На выдохе скручивайтесь, напрягая пресс',
+    'Не тяните шею руками, подбородок смотрит вверх'
+  ]
+};
 EXERCISE_GUIDE['Разводка гантелей'] = EXERCISE_GUIDE['Жим гантелей лёжа под углом / Разводка'];
 EXERCISE_GUIDE['Подтягивания "Турник"'] = EXERCISE_GUIDE['Подтягивания на турнике'];
 EXERCISE_GUIDE['Жим гантелей лежа'] = EXERCISE_GUIDE['Жим гантелей лёжа на полу (Floor Press)'];
+EXERCISE_GUIDE['Махи гантелями в стороны стоя'] = EXERCISE_GUIDE['Махи гантелями в стороны'];
+EXERCISE_GUIDE['Скручивания на наклонной скамье'] = EXERCISE_GUIDE['Скручивания'];
+EXERCISE_GUIDE['Скручивания на пресс'] = EXERCISE_GUIDE['Скручивания'];
 
 // Fuzzy lookup: try exact name, then name without parenthetical suffix
 function findGuide(exName) {
