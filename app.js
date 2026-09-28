@@ -1112,6 +1112,11 @@ function navTo(tab) {
     showScreen('program-screen');
     document.getElementById('nav-home').classList.add('active');
   }
+  else if(tab==='challenges'){
+    if(window.renderChallengesList) window.renderChallengesList();
+    showScreen('challenges-screen');
+    document.getElementById('nav-challenges').classList.add('active');
+  }
   else if(tab==='library'){renderLibrary();showScreen('library-screen');document.getElementById('nav-lib').classList.add('active');}
   else if(tab==='history'){renderHistory();showScreen('history-screen');document.getElementById('nav-hist').classList.add('active');}
   else if(tab==='profile'){showScreen('profile-screen');document.getElementById('nav-prof').classList.add('active');}
