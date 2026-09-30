@@ -66,41 +66,68 @@ window.renderChallengesList = function() {
       var isCompleted = currentReps >= totalReps;
       var isActiveDay = (daysElapsed >= 0 && daysElapsed < ch.days);
       
-      html += '<div style="background:var(--card);border-radius:16px;border:1px solid var(--border);padding:20px;margin-bottom:15px;position:relative;overflow:hidden;" onclick="openChallenge(\''+ch.id+'\')">';
-      html += '  <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--accent),#a78bfa)"></div>';
+      html += '<div style="background:var(--card);border-radius:24px;border:1px solid var(--border);padding:24px;margin-bottom:15px;position:relative;overflow:hidden;" onclick="openChallenge(\''+ch.id+'\')">';
+      html += '  <div style="position:absolute;top:0;left:0;right:0;height:6px;background:linear-gradient(90deg,var(--accent),#a78bfa)"></div>';
       
-      html += '  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">';
-      html += '    <div>';
-      html += '      <div style="font-size:20px;font-weight:800;margin-bottom:4px">'+ch.name+'</div>';
-      html += '      <div style="font-size:13px;color:var(--text2)">'+ch.days+' дней · день '+(isCompleted?ch.days:dayNum)+' из '+ch.days+'</div>';
-      html += '    </div>';
-      if (streak > 0) {
-        html += '    <div style="background:rgba(249,115,22,0.15);color:var(--orange);padding:4px 8px;border-radius:8px;font-size:11px;font-weight:700">🔥 '+streak+' дней</div>';
-      }
+      // Title
+      html += '  <div style="text-align:center;margin-bottom:24px;margin-top:8px">';
+      html += '    <div style="font-size:24px;font-weight:800;margin-bottom:4px">'+ch.name+'</div>';
+      html += '    <div style="font-size:13px;color:var(--text2)">'+ch.days+' дней · день '+(isCompleted?ch.days:dayNum)+' из '+ch.days+'</div>';
       html += '  </div>';
-      
-      // Circle Progress + Stats
-      html += '  <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px">';
-      html += '    <div style="position:relative;width:80px;height:80px;flex-shrink:0">';
-      html += '      <svg width="80" height="80" viewBox="0 0 100 100" style="transform:rotate(-90deg)">';
-      html += '        <circle cx="50" cy="50" r="40" fill="none" stroke="var(--card2)" stroke-width="8"></circle>';
-      html += '        <circle cx="50" cy="50" r="40" fill="none" stroke="url(#ch-grad)" stroke-width="8" stroke-dasharray="251" stroke-dashoffset="'+(251-(251*pct/100))+'" stroke-linecap="round" style="transition:stroke-dashoffset 1s ease-out"></circle>';
+
+      // Big Circle
+      html += '  <div style="display:flex;justify-content:center;margin-bottom:30px">';
+      html += '    <div style="position:relative;width:140px;height:140px">';
+      html += '      <svg width="140" height="140" viewBox="0 0 100 100" style="transform:rotate(-90deg)">';
+      html += '        <circle cx="50" cy="50" r="42" fill="none" stroke="var(--card2)" stroke-width="8"></circle>';
+      html += '        <circle cx="50" cy="50" r="42" fill="none" stroke="url(#ch-grad)" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="'+(264-(264*pct/100))+'" stroke-linecap="round" style="transition:stroke-dashoffset 1s ease-out"></circle>';
       html += '        <defs><linearGradient id="ch-grad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="var(--accent)"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient></defs>';
       html += '      </svg>';
-      html += '      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">';
-      html += '        <div style="font-size:16px;font-weight:800">'+pct+'%</div>';
+      html += '      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;margin-top:4px">';
+      html += '        <div style="font-size:32px;font-weight:800;line-height:1">'+pct+'%</div>';
+      html += '        <div style="font-size:11px;color:var(--text2);margin-top:4px">'+currentReps+' / '+totalReps+' повт</div>';
       html += '      </div>';
       html += '    </div>';
-      html += '    <div style="flex:1;display:flex;flex-direction:column;gap:8px">';
-      ch.exs.forEach(function(ex) {
-        html += '      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)">';
-        html += '        <span>'+ex.name+'</span><span style="font-weight:600">'+ex.reps+'/день</span>';
-        html += '      </div>';
-      });
-      html += '    </div>';
       html += '  </div>';
-      
-      html += '  <button style="width:100%;padding:12px;border-radius:10px;background:'+(isCompleted?'var(--card2)':'rgba(16,185,129,0.15)')+';color:'+(isCompleted?'var(--text2)':'var(--green)')+';border:none;font-size:14px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="event.stopPropagation(); startChallengeDay(\''+ch.id+'\')">'+(isCompleted?'Завершено 🎉':(isActiveDay?'Сегодняшняя тренировка ▶':'Просмотр'))+'</button>';
+
+      // List of Exercises
+      html += '  <div style="margin-bottom:24px">';
+      ch.exs.forEach(function(ex, idx) {
+        var exReps = 0;
+        for (var d = 0; d < ch.days; d++) {
+          var dDate = new Date(ch.startDate);
+          dDate.setDate(dDate.getDate() + d);
+          var dData = ch.history[formatDate(dDate)];
+          if (dData) {
+            if (dData.exsReps && dData.exsReps[idx]) exReps += dData.exsReps[idx];
+            else if (dData.exsDone && dData.exsDone[idx]) exReps += parseInt(ex.reps);
+          }
+        }
+        var totalExReps = parseInt(ex.reps) * ch.days;
+        var exPct = totalExReps > 0 ? Math.round((exReps / totalExReps) * 100) : 0;
+        if (exPct > 100) exPct = 100;
+
+        html += '    <div style="margin-bottom:12px">';
+        html += '      <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;margin-bottom:6px">';
+        html += '        <span>'+ex.name+'</span>';
+        html += '        <span style="color:var(--text2)">'+ex.reps+'/день</span>';
+        html += '      </div>';
+        html += '      <div style="height:6px;border-radius:3px;background:var(--card2);overflow:hidden">';
+        html += '        <div style="width:'+exPct+'%;height:100%;background:var(--accent);border-radius:3px;transition:width 1s"></div>';
+        html += '      </div>';
+        html += '    </div>';
+      });
+      html += '  </div>';
+
+      // Streak
+      if (streak > 0) {
+        html += '  <div style="display:flex;justify-content:center;margin-bottom:24px">';
+        html += '    <div style="background:rgba(249,115,22,0.15);color:var(--orange);padding:6px 14px;border-radius:12px;font-size:13px;font-weight:700">🔥 '+streak+' дней подряд</div>';
+        html += '  </div>';
+      }
+
+      // Button
+      html += '  <button style="width:100%;padding:16px;border-radius:12px;background:'+(isCompleted?'var(--card2)':'var(--green)')+';color:'+(isCompleted?'var(--text2)':'#fff')+';border:none;font-size:16px;font-weight:800;cursor:pointer;box-shadow:'+(isCompleted?'none':'0 4px 15px rgba(16,185,129,0.3)')+';-webkit-tap-highlight-color:transparent" onclick="event.stopPropagation(); startChallengeDay(\''+ch.id+'\')">'+(isCompleted?'Завершено 🎉':(isActiveDay?'Сегодняшняя тренировка ▶':'Просмотр'))+'</button>';
       html += '</div>';
     });
   }
