@@ -39,12 +39,22 @@ window.renderChallengesList = function() {
         var dateStr = formatDate(dayDate);
         var dData = ch.history[dateStr];
         
-        if (dData && dData.done) {
-          currentReps += ch.exs.reduce((sum, ex) => sum + parseInt(ex.reps), 0);
-          currStreak++;
-          if (currStreak > maxStreak) maxStreak = currStreak;
+        if (dData) {
+          if (dData.exsReps) {
+            currentReps += dData.exsReps.reduce((a, b) => a + (b||0), 0);
+          } else if (dData.exsDone) {
+            dData.exsDone.forEach(function(done, idx) {
+              if (done) currentReps += parseInt(ch.exs[idx].reps);
+            });
+          }
+          
+          if (dData.done) {
+            currStreak++;
+            if (currStreak > maxStreak) maxStreak = currStreak;
+          } else if (getDayDiff(dayDate, new Date()) > 0) {
+            currStreak = 0;
+          }
         } else {
-          // If it's a past day and not done, streak resets
           if (getDayDiff(dayDate, new Date()) > 0) {
             currStreak = 0;
           }
@@ -286,18 +296,28 @@ window.openChallengeDay = function(dateStr) {
   document.getElementById('cday-title').textContent = 'День ' + dayNum + ' / ' + curCh.days;
   document.getElementById('cday-sub').textContent = curCh.name;
   
-  var dData = curCh.history[dateStr] || { done: false, exsDone: [] };
+  var dData = curCh.history[dateStr] || { done: false, exsDone: [], exsReps: [] };
   var html = '';
   
   curCh.exs.forEach(function(ex, i) {
-    var isDone = dData.exsDone && dData.exsDone[i];
+    var repsDone = 0;
+    if (dData.exsReps && dData.exsReps[i] !== undefined) {
+      repsDone = dData.exsReps[i];
+    } else if (dData.exsDone && dData.exsDone[i]) {
+      repsDone = ex.reps;
+    }
     
-    html += '<div style="background:var(--card);border-radius:16px;border:1px solid '+(isDone?'var(--accent)':'var(--border)')+';padding:20px;display:flex;align-items:center;justify-content:space-between;transition:all 0.2s" onclick="toggleChEx(this, '+i+')" data-idx="'+i+'" data-done="'+(isDone?'true':'false')+'">';
-    html += '  <div>';
-    html += '    <div style="font-size:14px;color:var(--text2);margin-bottom:4px">'+ex.name+'</div>';
-    html += '    <div style="font-size:32px;font-weight:800;line-height:1">'+ex.reps+'</div>';
+    var isDone = repsDone >= ex.reps;
+    
+    html += '<div style="background:var(--card);border-radius:16px;border:1px solid '+(isDone?'var(--accent)':'var(--border)')+';padding:20px;display:flex;align-items:center;justify-content:space-between;transition:all 0.2s;margin-bottom:12px" data-idx="'+i+'" data-target="'+ex.reps+'" data-done="'+(isDone?'true':'false')+'">';
+    html += '  <div style="flex:1">';
+    html += '    <div style="font-size:14px;color:var(--text2);margin-bottom:8px">'+ex.name+'</div>';
+    html += '    <div style="display:flex;align-items:baseline;gap:8px">';
+    html += '      <input type="number" class="ch-rep-inp" value="'+(repsDone||'')+'" placeholder="0" oninput="updateChRep(this, '+i+')" style="width:80px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:24px;font-weight:800;outline:none;text-align:center" onclick="event.stopPropagation()">';
+    html += '      <div style="font-size:20px;color:var(--text3);font-weight:800">/ '+ex.reps+'</div>';
+    html += '    </div>';
     html += '  </div>';
-    html += '  <div class="ch-chk" style="width:40px;height:40px;border-radius:20px;border:2px solid '+(isDone?'var(--accent)':'var(--border)')+';background:'+(isDone?'var(--accent)':'transparent')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;transition:all 0.2s">'+(isDone?'✓':'')+'</div>';
+    html += '  <div class="ch-chk" onclick="toggleChEx(this.parentElement, '+i+')" style="width:50px;height:50px;border-radius:25px;border:2px solid '+(isDone?'var(--accent)':'var(--border)')+';background:'+(isDone?'var(--accent)':'transparent')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;transition:all 0.2s;cursor:pointer;flex-shrink:0">'+(isDone?'✓':'')+'</div>';
     html += '</div>';
   });
   
@@ -305,34 +325,56 @@ window.openChallengeDay = function(dateStr) {
   showScreen('challenge-day-screen');
 };
 
-window.toggleChEx = function(el, idx) {
-  var chk = el.querySelector('.ch-chk');
-  var isDone = el.dataset.done === 'true';
+window.updateChRep = function(inp, idx) {
+  var row = inp.closest('div[data-idx]');
+  var target = parseInt(row.dataset.target);
+  var val = parseInt(inp.value) || 0;
+  var chk = row.querySelector('.ch-chk');
+  var isDone = val >= target;
   
   if (isDone) {
-    el.dataset.done = 'false';
-    el.style.borderColor = 'var(--border)';
-    chk.style.background = 'transparent';
-    chk.style.borderColor = 'var(--border)';
-    chk.innerHTML = '';
-  } else {
-    el.dataset.done = 'true';
-    el.style.borderColor = 'var(--accent)';
+    if (row.dataset.done !== 'true') playSound('ding');
+    row.dataset.done = 'true';
+    row.style.borderColor = 'var(--accent)';
     chk.style.background = 'var(--accent)';
     chk.style.borderColor = 'var(--accent)';
     chk.innerHTML = '✓';
-    playSound('ding');
+  } else {
+    row.dataset.done = 'false';
+    row.style.borderColor = 'var(--border)';
+    chk.style.background = 'transparent';
+    chk.style.borderColor = 'var(--border)';
+    chk.innerHTML = '';
+  }
+};
+
+window.toggleChEx = function(row, idx) {
+  var target = parseInt(row.dataset.target);
+  var inp = row.querySelector('.ch-rep-inp');
+  var isDone = row.dataset.done === 'true';
+  
+  if (isDone) {
+    inp.value = '';
+    updateChRep(inp, idx);
+  } else {
+    inp.value = target;
+    updateChRep(inp, idx);
   }
 };
 
 window.saveChallengeDay = function() {
-  var dData = { done: true, exsDone: [] };
+  var dData = { done: true, exsDone: [], exsReps: [] };
   var allDone = true;
   var rows = document.querySelectorAll('#cday-exs > div');
   
   rows.forEach(function(row, i) {
-    var isDone = row.dataset.done === 'true';
+    var val = parseInt(row.querySelector('.ch-rep-inp').value) || 0;
+    var target = parseInt(row.dataset.target);
+    var isDone = val >= target;
+    
+    dData.exsReps[i] = val;
     dData.exsDone[i] = isDone;
+    
     if (!isDone) allDone = false;
   });
   
@@ -344,6 +386,8 @@ window.saveChallengeDay = function() {
   if (allDone) {
     playSound('tada');
     showToast('День выполнен! Красавчик! 🏆');
+  } else {
+    showToast('Прогресс сохранён!');
   }
   
   navTo('challenges');
