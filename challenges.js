@@ -39,12 +39,22 @@ window.renderChallengesList = function() {
         var dateStr = formatDate(dayDate);
         var dData = ch.history[dateStr];
         
-        if (dData && dData.done) {
-          currentReps += ch.exs.reduce((sum, ex) => sum + parseInt(ex.reps), 0);
-          currStreak++;
-          if (currStreak > maxStreak) maxStreak = currStreak;
+        if (dData) {
+          if (dData.exsReps) {
+            currentReps += dData.exsReps.reduce((a, b) => a + (b||0), 0);
+          } else if (dData.exsDone) {
+            dData.exsDone.forEach(function(done, idx) {
+              if (done) currentReps += parseInt(ch.exs[idx].reps);
+            });
+          }
+          
+          if (dData.done) {
+            currStreak++;
+            if (currStreak > maxStreak) maxStreak = currStreak;
+          } else if (getDayDiff(dayDate, new Date()) > 0) {
+            currStreak = 0;
+          }
         } else {
-          // If it's a past day and not done, streak resets
           if (getDayDiff(dayDate, new Date()) > 0) {
             currStreak = 0;
           }
@@ -56,41 +66,68 @@ window.renderChallengesList = function() {
       var isCompleted = currentReps >= totalReps;
       var isActiveDay = (daysElapsed >= 0 && daysElapsed < ch.days);
       
-      html += '<div style="background:var(--card);border-radius:16px;border:1px solid var(--border);padding:20px;margin-bottom:15px;position:relative;overflow:hidden;" onclick="openChallenge(\''+ch.id+'\')">';
-      html += '  <div style="position:absolute;top:0;left:0;right:0;height:4px;background:linear-gradient(90deg,var(--accent),#a78bfa)"></div>';
+      html += '<div style="background:var(--card);border-radius:24px;border:1px solid var(--border);padding:24px;margin-bottom:15px;position:relative;overflow:hidden;" onclick="openChallenge(\''+ch.id+'\')">';
+      html += '  <div style="position:absolute;top:0;left:0;right:0;height:6px;background:linear-gradient(90deg,var(--accent),#a78bfa)"></div>';
       
-      html += '  <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:20px">';
-      html += '    <div>';
-      html += '      <div style="font-size:20px;font-weight:800;margin-bottom:4px">'+ch.name+'</div>';
-      html += '      <div style="font-size:13px;color:var(--text2)">'+ch.days+' дней · день '+(isCompleted?ch.days:dayNum)+' из '+ch.days+'</div>';
-      html += '    </div>';
-      if (streak > 0) {
-        html += '    <div style="background:rgba(249,115,22,0.15);color:var(--orange);padding:4px 8px;border-radius:8px;font-size:11px;font-weight:700">🔥 '+streak+' дней</div>';
-      }
+      // Title
+      html += '  <div style="text-align:center;margin-bottom:24px;margin-top:8px">';
+      html += '    <div style="font-size:24px;font-weight:800;margin-bottom:4px">'+ch.name+'</div>';
+      html += '    <div style="font-size:13px;color:var(--text2)">'+ch.days+' дней · день '+(isCompleted?ch.days:dayNum)+' из '+ch.days+'</div>';
       html += '  </div>';
-      
-      // Circle Progress + Stats
-      html += '  <div style="display:flex;align-items:center;gap:20px;margin-bottom:20px">';
-      html += '    <div style="position:relative;width:80px;height:80px;flex-shrink:0">';
-      html += '      <svg width="80" height="80" viewBox="0 0 100 100" style="transform:rotate(-90deg)">';
-      html += '        <circle cx="50" cy="50" r="40" fill="none" stroke="var(--card2)" stroke-width="8"></circle>';
-      html += '        <circle cx="50" cy="50" r="40" fill="none" stroke="url(#ch-grad)" stroke-width="8" stroke-dasharray="251" stroke-dashoffset="'+(251-(251*pct/100))+'" stroke-linecap="round" style="transition:stroke-dashoffset 1s ease-out"></circle>';
+
+      // Big Circle
+      html += '  <div style="display:flex;justify-content:center;margin-bottom:30px">';
+      html += '    <div style="position:relative;width:140px;height:140px">';
+      html += '      <svg width="140" height="140" viewBox="0 0 100 100" style="transform:rotate(-90deg)">';
+      html += '        <circle cx="50" cy="50" r="42" fill="none" stroke="var(--card2)" stroke-width="8"></circle>';
+      html += '        <circle cx="50" cy="50" r="42" fill="none" stroke="url(#ch-grad)" stroke-width="8" stroke-dasharray="264" stroke-dashoffset="'+(264-(264*pct/100))+'" stroke-linecap="round" style="transition:stroke-dashoffset 1s ease-out"></circle>';
       html += '        <defs><linearGradient id="ch-grad" x1="0%" y1="0%" x2="100%" y2="0%"><stop offset="0%" stop-color="var(--accent)"/><stop offset="100%" stop-color="#a78bfa"/></linearGradient></defs>';
       html += '      </svg>';
-      html += '      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center">';
-      html += '        <div style="font-size:16px;font-weight:800">'+pct+'%</div>';
+      html += '      <div style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;margin-top:4px">';
+      html += '        <div style="font-size:32px;font-weight:800;line-height:1">'+pct+'%</div>';
+      html += '        <div style="font-size:11px;color:var(--text2);margin-top:4px">'+currentReps+' / '+totalReps+' повт</div>';
       html += '      </div>';
       html += '    </div>';
-      html += '    <div style="flex:1;display:flex;flex-direction:column;gap:8px">';
-      ch.exs.forEach(function(ex) {
-        html += '      <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--text2)">';
-        html += '        <span>'+ex.name+'</span><span style="font-weight:600">'+ex.reps+'/день</span>';
-        html += '      </div>';
-      });
-      html += '    </div>';
       html += '  </div>';
-      
-      html += '  <button style="width:100%;padding:12px;border-radius:10px;background:'+(isCompleted?'var(--card2)':'rgba(16,185,129,0.15)')+';color:'+(isCompleted?'var(--text2)':'var(--green)')+';border:none;font-size:14px;font-weight:700;cursor:pointer;-webkit-tap-highlight-color:transparent" onclick="event.stopPropagation(); startChallengeDay(\''+ch.id+'\')">'+(isCompleted?'Завершено 🎉':(isActiveDay?'Сегодняшняя тренировка ▶':'Просмотр'))+'</button>';
+
+      // List of Exercises
+      html += '  <div style="margin-bottom:24px">';
+      ch.exs.forEach(function(ex, idx) {
+        var exReps = 0;
+        for (var d = 0; d < ch.days; d++) {
+          var dDate = new Date(ch.startDate);
+          dDate.setDate(dDate.getDate() + d);
+          var dData = ch.history[formatDate(dDate)];
+          if (dData) {
+            if (dData.exsReps && dData.exsReps[idx]) exReps += dData.exsReps[idx];
+            else if (dData.exsDone && dData.exsDone[idx]) exReps += parseInt(ex.reps);
+          }
+        }
+        var totalExReps = parseInt(ex.reps) * ch.days;
+        var exPct = totalExReps > 0 ? Math.round((exReps / totalExReps) * 100) : 0;
+        if (exPct > 100) exPct = 100;
+
+        html += '    <div style="margin-bottom:12px">';
+        html += '      <div style="display:flex;justify-content:space-between;font-size:14px;font-weight:600;margin-bottom:6px">';
+        html += '        <span>'+ex.name+'</span>';
+        html += '        <span style="color:var(--text2)">'+ex.reps+'/день</span>';
+        html += '      </div>';
+        html += '      <div style="height:6px;border-radius:3px;background:var(--card2);overflow:hidden">';
+        html += '        <div style="width:'+exPct+'%;height:100%;background:var(--accent);border-radius:3px;transition:width 1s"></div>';
+        html += '      </div>';
+        html += '    </div>';
+      });
+      html += '  </div>';
+
+      // Streak
+      if (streak > 0) {
+        html += '  <div style="display:flex;justify-content:center;margin-bottom:24px">';
+        html += '    <div style="background:rgba(249,115,22,0.15);color:var(--orange);padding:6px 14px;border-radius:12px;font-size:13px;font-weight:700">🔥 '+streak+' дней подряд</div>';
+        html += '  </div>';
+      }
+
+      // Button
+      html += '  <button style="width:100%;padding:16px;border-radius:12px;background:'+(isCompleted?'var(--card2)':'var(--green)')+';color:'+(isCompleted?'var(--text2)':'#fff')+';border:none;font-size:16px;font-weight:800;cursor:pointer;box-shadow:'+(isCompleted?'none':'0 4px 15px rgba(16,185,129,0.3)')+';-webkit-tap-highlight-color:transparent" onclick="event.stopPropagation(); startChallengeDay(\''+ch.id+'\')">'+(isCompleted?'Завершено 🎉':(isActiveDay?'Сегодняшняя тренировка ▶':'Просмотр'))+'</button>';
       html += '</div>';
     });
   }
@@ -286,18 +323,28 @@ window.openChallengeDay = function(dateStr) {
   document.getElementById('cday-title').textContent = 'День ' + dayNum + ' / ' + curCh.days;
   document.getElementById('cday-sub').textContent = curCh.name;
   
-  var dData = curCh.history[dateStr] || { done: false, exsDone: [] };
+  var dData = curCh.history[dateStr] || { done: false, exsDone: [], exsReps: [] };
   var html = '';
   
   curCh.exs.forEach(function(ex, i) {
-    var isDone = dData.exsDone && dData.exsDone[i];
+    var repsDone = 0;
+    if (dData.exsReps && dData.exsReps[i] !== undefined) {
+      repsDone = dData.exsReps[i];
+    } else if (dData.exsDone && dData.exsDone[i]) {
+      repsDone = ex.reps;
+    }
     
-    html += '<div style="background:var(--card);border-radius:16px;border:1px solid '+(isDone?'var(--accent)':'var(--border)')+';padding:20px;display:flex;align-items:center;justify-content:space-between;transition:all 0.2s" onclick="toggleChEx(this, '+i+')" data-idx="'+i+'" data-done="'+(isDone?'true':'false')+'">';
-    html += '  <div>';
-    html += '    <div style="font-size:14px;color:var(--text2);margin-bottom:4px">'+ex.name+'</div>';
-    html += '    <div style="font-size:32px;font-weight:800;line-height:1">'+ex.reps+'</div>';
+    var isDone = repsDone >= ex.reps;
+    
+    html += '<div style="background:var(--card);border-radius:16px;border:1px solid '+(isDone?'var(--accent)':'var(--border)')+';padding:20px;display:flex;align-items:center;justify-content:space-between;transition:all 0.2s;margin-bottom:12px" data-idx="'+i+'" data-target="'+ex.reps+'" data-done="'+(isDone?'true':'false')+'">';
+    html += '  <div style="flex:1">';
+    html += '    <div style="font-size:14px;color:var(--text2);margin-bottom:8px">'+ex.name+'</div>';
+    html += '    <div style="display:flex;align-items:baseline;gap:8px">';
+    html += '      <input type="number" class="ch-rep-inp" value="'+(repsDone||'')+'" placeholder="0" oninput="updateChRep(this, '+i+')" style="width:80px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:24px;font-weight:800;outline:none;text-align:center" onclick="event.stopPropagation()">';
+    html += '      <div style="font-size:20px;color:var(--text3);font-weight:800">/ '+ex.reps+'</div>';
+    html += '    </div>';
     html += '  </div>';
-    html += '  <div class="ch-chk" style="width:40px;height:40px;border-radius:20px;border:2px solid '+(isDone?'var(--accent)':'var(--border)')+';background:'+(isDone?'var(--accent)':'transparent')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:20px;transition:all 0.2s">'+(isDone?'✓':'')+'</div>';
+    html += '  <div class="ch-chk" onclick="toggleChEx(this.parentElement, '+i+')" style="width:50px;height:50px;border-radius:25px;border:2px solid '+(isDone?'var(--accent)':'var(--border)')+';background:'+(isDone?'var(--accent)':'transparent')+';display:flex;align-items:center;justify-content:center;color:#fff;font-size:24px;transition:all 0.2s;cursor:pointer;flex-shrink:0">'+(isDone?'✓':'')+'</div>';
     html += '</div>';
   });
   
@@ -305,34 +352,56 @@ window.openChallengeDay = function(dateStr) {
   showScreen('challenge-day-screen');
 };
 
-window.toggleChEx = function(el, idx) {
-  var chk = el.querySelector('.ch-chk');
-  var isDone = el.dataset.done === 'true';
+window.updateChRep = function(inp, idx) {
+  var row = inp.closest('div[data-idx]');
+  var target = parseInt(row.dataset.target);
+  var val = parseInt(inp.value) || 0;
+  var chk = row.querySelector('.ch-chk');
+  var isDone = val >= target;
   
   if (isDone) {
-    el.dataset.done = 'false';
-    el.style.borderColor = 'var(--border)';
-    chk.style.background = 'transparent';
-    chk.style.borderColor = 'var(--border)';
-    chk.innerHTML = '';
-  } else {
-    el.dataset.done = 'true';
-    el.style.borderColor = 'var(--accent)';
+    if (row.dataset.done !== 'true') playSound('ding');
+    row.dataset.done = 'true';
+    row.style.borderColor = 'var(--accent)';
     chk.style.background = 'var(--accent)';
     chk.style.borderColor = 'var(--accent)';
     chk.innerHTML = '✓';
-    playSound('ding');
+  } else {
+    row.dataset.done = 'false';
+    row.style.borderColor = 'var(--border)';
+    chk.style.background = 'transparent';
+    chk.style.borderColor = 'var(--border)';
+    chk.innerHTML = '';
+  }
+};
+
+window.toggleChEx = function(row, idx) {
+  var target = parseInt(row.dataset.target);
+  var inp = row.querySelector('.ch-rep-inp');
+  var isDone = row.dataset.done === 'true';
+  
+  if (isDone) {
+    inp.value = '';
+    updateChRep(inp, idx);
+  } else {
+    inp.value = target;
+    updateChRep(inp, idx);
   }
 };
 
 window.saveChallengeDay = function() {
-  var dData = { done: true, exsDone: [] };
+  var dData = { done: true, exsDone: [], exsReps: [] };
   var allDone = true;
   var rows = document.querySelectorAll('#cday-exs > div');
   
   rows.forEach(function(row, i) {
-    var isDone = row.dataset.done === 'true';
+    var val = parseInt(row.querySelector('.ch-rep-inp').value) || 0;
+    var target = parseInt(row.dataset.target);
+    var isDone = val >= target;
+    
+    dData.exsReps[i] = val;
     dData.exsDone[i] = isDone;
+    
     if (!isDone) allDone = false;
   });
   
@@ -344,6 +413,8 @@ window.saveChallengeDay = function() {
   if (allDone) {
     playSound('tada');
     showToast('День выполнен! Красавчик! 🏆');
+  } else {
+    showToast('Прогресс сохранён!');
   }
   
   navTo('challenges');
