@@ -340,7 +340,7 @@ window.openChallengeDay = function(dateStr) {
     html += '  <div style="flex:1">';
     html += '    <div style="font-size:14px;color:var(--text2);margin-bottom:8px">'+ex.name+'</div>';
     html += '    <div style="display:flex;align-items:baseline;gap:8px">';
-    html += '      <input type="number" class="ch-rep-inp" value="'+(repsDone||'')+'" placeholder="0" oninput="updateChRep(this, '+i+')" style="width:80px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:24px;font-weight:800;outline:none;text-align:center" onclick="event.stopPropagation()">';
+    html += '      <input type="number" inputmode="numeric" pattern="[0-9]*" class="ch-rep-inp" value="'+(repsDone||'')+'" placeholder="0" oninput="updateChRep(this, '+i+')" style="width:80px;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px;color:var(--text);font-size:24px;font-weight:800;outline:none;text-align:center" onclick="event.stopPropagation()">';
     html += '      <div style="font-size:20px;color:var(--text3);font-weight:800">/ '+ex.reps+'</div>';
     html += '    </div>';
     html += '  </div>';
